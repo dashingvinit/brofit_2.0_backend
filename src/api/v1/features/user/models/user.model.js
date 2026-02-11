@@ -85,8 +85,6 @@ const userSchema = new mongoose.Schema(
     clerkUserId: {
       type: String,
       required: false, // Optional - only for users who authenticate through Clerk
-      sparse: true, // Allow null/undefined values, only enforce uniqueness when present
-      index: true,
     },
     clerkOrganizationId: {
       type: String,
@@ -151,14 +149,17 @@ const userSchema = new mongoose.Schema(
   },
 );
 
-// Create compound index for unique user per organization (sparse to allow null clerkUserId)
+// Create compound index for unique user per organization (only when clerkUserId exists)
 userSchema.index(
   { clerkUserId: 1, clerkOrganizationId: 1 },
-  { unique: true, sparse: true },
+  {
+    unique: true,
+    partialFilterExpression: { clerkUserId: { $type: "string", $ne: null } }
+  },
 );
 
-// Ensure email is unique within an organization
-userSchema.index({ email: 1, clerkOrganizationId: 1 }, { unique: true });
+// Ensure email is unique within an organization (sparse to allow null/empty emails)
+userSchema.index({ email: 1, clerkOrganizationId: 1 }, { unique: true, sparse: true });
 
 // Virtual for active membership
 userSchema.virtual('activeMembership').get(function() {

@@ -58,21 +58,21 @@ router.delete("/:id", checkRole(["admin"]), userController.deleteUser);
 router.post(
   "/:id/memberships",
   checkRole(["admin"]),
-  userController.addMembershipPlan
+  userController.addMembershipPlan,
 );
 
 // Update membership plan
 router.patch(
   "/:id/memberships/:membershipId",
   checkRole(["admin"]),
-  userController.updateMembershipPlan
+  userController.updateMembershipPlan,
 );
 
 // Remove membership plan
 router.delete(
   "/:id/memberships/:membershipId",
   checkRole(["admin"]),
-  userController.removeMembershipPlan
+  userController.removeMembershipPlan,
 );
 
 // ============================================
@@ -83,21 +83,21 @@ router.delete(
 router.post(
   "/:id/trainings",
   checkRole(["admin"]),
-  userController.addTrainingPlan
+  userController.addTrainingPlan,
 );
 
 // Update training plan
 router.patch(
   "/:id/trainings/:trainingId",
   checkRole(["admin"]),
-  userController.updateTrainingPlan
+  userController.updateTrainingPlan,
 );
 
 // Remove training plan
 router.delete(
   "/:id/trainings/:trainingId",
   checkRole(["admin"]),
-  userController.removeTrainingPlan
+  userController.removeTrainingPlan,
 );
 
 module.exports = router;

@@ -22,8 +22,16 @@ const trainingPlanSchema = new mongoose.Schema(
     },
     category: {
       type: String,
-      enum: ['weight-training', 'cardio', 'yoga', 'crossfit', 'personal-training', 'group-class', 'other'],
-      default: 'personal-training',
+      enum: [
+        "weight-training",
+        "cardio",
+        "yoga",
+        "crossfit",
+        "personal-training",
+        "group-class",
+        "other",
+      ],
+      default: "personal-training",
     },
     durationDays: {
       type: Number,
@@ -46,6 +54,10 @@ const trainingPlanSchema = new mongoose.Schema(
     requiresTrainer: {
       type: Boolean,
       default: true,
+    },
+    trainer: {
+      ref: "User",
+      type: mongoose.Schema.Types.ObjectId,
     },
     isActive: {
       type: Boolean,
