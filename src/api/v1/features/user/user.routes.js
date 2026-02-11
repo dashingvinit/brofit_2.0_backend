@@ -50,4 +50,54 @@ router.patch(
 // Delete user (admin only)
 router.delete("/:id", checkRole(["admin"]), userController.deleteUser);
 
+// ============================================
+// MEMBERSHIP PLAN ROUTES (Admin only)
+// ============================================
+
+// Add membership plan to user
+router.post(
+  "/:id/memberships",
+  checkRole(["admin"]),
+  userController.addMembershipPlan
+);
+
+// Update membership plan
+router.patch(
+  "/:id/memberships/:membershipId",
+  checkRole(["admin"]),
+  userController.updateMembershipPlan
+);
+
+// Remove membership plan
+router.delete(
+  "/:id/memberships/:membershipId",
+  checkRole(["admin"]),
+  userController.removeMembershipPlan
+);
+
+// ============================================
+// TRAINING PLAN ROUTES (Admin only)
+// ============================================
+
+// Add training plan to user
+router.post(
+  "/:id/trainings",
+  checkRole(["admin"]),
+  userController.addTrainingPlan
+);
+
+// Update training plan
+router.patch(
+  "/:id/trainings/:trainingId",
+  checkRole(["admin"]),
+  userController.updateTrainingPlan
+);
+
+// Remove training plan
+router.delete(
+  "/:id/trainings/:trainingId",
+  checkRole(["admin"]),
+  userController.removeTrainingPlan
+);
+
 module.exports = router;
