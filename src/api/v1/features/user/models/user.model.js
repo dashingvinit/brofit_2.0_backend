@@ -3,77 +3,83 @@ const mongoose = require("mongoose");
 /**
  * Membership Plan Schema (embedded in user)
  */
-const userMembershipSchema = new mongoose.Schema({
-  planId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'MembershipPlan',
-    required: true,
+const userMembershipSchema = new mongoose.Schema(
+  {
+    planId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "MembershipPlan",
+      required: true,
+    },
+    planName: {
+      type: String,
+      required: true,
+    },
+    startDate: {
+      type: Date,
+      required: true,
+    },
+    endDate: {
+      type: Date,
+      required: true,
+    },
+    status: {
+      type: String,
+      enum: ["active", "expired", "cancelled"],
+      default: "active",
+    },
+    amountPaid: {
+      type: Number,
+      min: 0,
+    },
+    paymentReference: {
+      type: String,
+    },
   },
-  planName: {
-    type: String,
-    required: true,
-  },
-  startDate: {
-    type: Date,
-    required: true,
-  },
-  endDate: {
-    type: Date,
-    required: true,
-  },
-  status: {
-    type: String,
-    enum: ['active', 'expired', 'cancelled'],
-    default: 'active',
-  },
-  amountPaid: {
-    type: Number,
-    min: 0,
-  },
-  paymentReference: {
-    type: String,
-  },
-}, { _id: true, timestamps: true });
+  { _id: true, timestamps: true },
+);
 
 /**
  * Training Plan Schema (embedded in user)
  */
-const userTrainingSchema = new mongoose.Schema({
-  planId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'TrainingPlan',
+const userTrainingSchema = new mongoose.Schema(
+  {
+    planId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "TrainingPlan",
+    },
+    planName: {
+      type: String,
+      required: true,
+    },
+    trainerId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    trainerName: {
+      type: String,
+    },
+    startDate: {
+      type: Date,
+      required: true,
+    },
+    endDate: {
+      type: Date,
+    },
+    status: {
+      type: String,
+      enum: ["active", "completed", "cancelled"],
+      default: "active",
+    },
+    sessionsPerWeek: {
+      type: Number,
+      min: 1,
+    },
+    notes: {
+      type: String,
+    },
   },
-  planName: {
-    type: String,
-    required: true,
-  },
-  trainerId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-  },
-  trainerName: {
-    type: String,
-  },
-  startDate: {
-    type: Date,
-    required: true,
-  },
-  endDate: {
-    type: Date,
-  },
-  status: {
-    type: String,
-    enum: ['active', 'completed', 'cancelled'],
-    default: 'active',
-  },
-  sessionsPerWeek: {
-    type: Number,
-    min: 1,
-  },
-  notes: {
-    type: String,
-  },
-}, { _id: true, timestamps: true });
+  { _id: true, timestamps: true },
+);
 
 /**
  * User Schema
@@ -84,7 +90,7 @@ const userSchema = new mongoose.Schema(
   {
     clerkUserId: {
       type: String,
-      required: false, // Optional - only for users who authenticate through Clerk
+      required: false,
     },
     clerkOrganizationId: {
       type: String,
@@ -154,26 +160,28 @@ userSchema.index(
   { clerkUserId: 1, clerkOrganizationId: 1 },
   {
     unique: true,
-    partialFilterExpression: { clerkUserId: { $type: "string", $ne: null } }
+    partialFilterExpression: { clerkUserId: { $type: "string", $ne: null } },
   },
 );
 
 // Ensure email is unique within an organization (sparse to allow null/empty emails)
-userSchema.index({ email: 1, clerkOrganizationId: 1 }, { unique: true, sparse: true });
+userSchema.index(
+  { email: 1, clerkOrganizationId: 1 },
+  { unique: true, sparse: true },
+);
 
 // Virtual for active membership
-userSchema.virtual('activeMembership').get(function() {
+userSchema.virtual("activeMembership").get(function () {
   const now = new Date();
-  return this.membershipPlans.find(plan =>
-    plan.status === 'active' &&
-    plan.startDate <= now &&
-    plan.endDate >= now
+  return this.membershipPlans.find(
+    (plan) =>
+      plan.status === "active" && plan.startDate <= now && plan.endDate >= now,
   );
 });
 
 // Virtual for active training plans
-userSchema.virtual('activeTrainingPlans').get(function() {
-  return this.trainingPlans.filter(plan => plan.status === 'active');
+userSchema.virtual("activeTrainingPlans").get(function () {
+  return this.trainingPlans.filter((plan) => plan.status === "active");
 });
 
 /**
@@ -189,18 +197,18 @@ const UserRole = {
  * Membership status values
  */
 const MembershipStatus = {
-  ACTIVE: 'active',
-  EXPIRED: 'expired',
-  CANCELLED: 'cancelled',
+  ACTIVE: "active",
+  EXPIRED: "expired",
+  CANCELLED: "cancelled",
 };
 
 /**
  * Training status values
  */
 const TrainingStatus = {
-  ACTIVE: 'active',
-  COMPLETED: 'completed',
-  CANCELLED: 'cancelled',
+  ACTIVE: "active",
+  COMPLETED: "completed",
+  CANCELLED: "cancelled",
 };
 
 // Create and export the model
