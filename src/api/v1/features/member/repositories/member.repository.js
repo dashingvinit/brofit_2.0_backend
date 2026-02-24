@@ -17,17 +17,24 @@ class MemberRepository extends CrudRepository {
     });
   }
 
-  async findByOrganization(organizationId, options = {}) {
-    return await this.find(
-      {
-        orgId: organizationId,
-        isActive: true,
-      },
-      {
-        orderBy: { createdAt: "desc" },
-        ...options,
-      },
-    );
+  async findByOrganization(
+    organizationId,
+    options = {},
+    includeInactive = true,
+  ) {
+    const whereClause = {
+      orgId: organizationId,
+    };
+
+    // Only filter by isActive if includeInactive is false
+    if (!includeInactive) {
+      whereClause.isActive = true;
+    }
+
+    return await this.find(whereClause, {
+      orderBy: { createdAt: "desc" },
+      ...options,
+    });
   }
 
   async findByEmail(email) {
@@ -41,54 +48,80 @@ class MemberRepository extends CrudRepository {
     });
   }
 
-  async findActiveMembers(organizationId, page = 1, limit = 10) {
-    return await this.findWithPagination(
-      {
-        orgId: organizationId,
-        isActive: true,
+  async findActiveMembers(
+    organizationId,
+    page = 1,
+    limit = 10,
+    includeInactive = true,
+  ) {
+    const whereClause = {
+      orgId: organizationId,
+    };
+
+    // Only filter by isActive if includeInactive is false
+    if (!includeInactive) {
+      whereClause.isActive = true;
+    }
+
+    return await this.findWithPagination(whereClause, {
+      page,
+      limit,
+      orderBy: { createdAt: "desc" },
+      include: {
+        organization: true,
       },
-      {
-        page,
-        limit,
-        orderBy: { createdAt: "desc" },
-        include: {
-          organization: true,
-        },
-      },
-    );
+    });
   }
 
   async getMemberStats(organizationId) {
-    const [totalMembers, activeMembers, inactiveMembers] = await Promise.all([
-      this.count({ orgId: organizationId }),
-      this.count({ orgId: organizationId, isActive: true }),
-      this.count({ orgId: organizationId, isActive: false }),
-    ]);
+    const startOfMonth = new Date();
+    startOfMonth.setDate(1);
+    startOfMonth.setHours(0, 0, 0, 0);
+
+    const [totalMembers, activeMembers, inactiveMembers, newThisMonth] =
+      await Promise.all([
+        this.count({ orgId: organizationId }),
+        this.count({ orgId: organizationId, isActive: true }),
+        this.count({ orgId: organizationId, isActive: false }),
+        this.count({
+          orgId: organizationId,
+          createdAt: { gte: startOfMonth },
+        }),
+      ]);
 
     return {
       total: totalMembers,
       active: activeMembers,
       inactive: inactiveMembers,
+      newThisMonth: newThisMonth,
     };
   }
 
-  async searchMembers(organizationId, searchTerm, limit = 10) {
-    return await this.find(
-      {
-        orgId: organizationId,
-        isActive: true,
-        OR: [
-          { firstName: { contains: searchTerm, mode: "insensitive" } },
-          { lastName: { contains: searchTerm, mode: "insensitive" } },
-          { email: { contains: searchTerm, mode: "insensitive" } },
-          { phone: { contains: searchTerm } },
-        ],
-      },
-      {
-        take: limit,
-        orderBy: { createdAt: "desc" },
-      },
-    );
+  async searchMembers(
+    organizationId,
+    searchTerm,
+    limit = 10,
+    includeInactive = true,
+  ) {
+    const whereClause = {
+      orgId: organizationId,
+      OR: [
+        { firstName: { contains: searchTerm, mode: "insensitive" } },
+        { lastName: { contains: searchTerm, mode: "insensitive" } },
+        { email: { contains: searchTerm, mode: "insensitive" } },
+        { phone: { contains: searchTerm } },
+      ],
+    };
+
+    // Only filter by isActive if includeInactive is false
+    if (!includeInactive) {
+      whereClause.isActive = true;
+    }
+
+    return await this.find(whereClause, {
+      take: limit,
+      orderBy: { createdAt: "desc" },
+    });
   }
 }
 

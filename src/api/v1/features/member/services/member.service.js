@@ -30,10 +30,14 @@ class MemberService {
       firstName: memberData.firstName,
       lastName: memberData.lastName,
       email: memberData.email,
-      phone: memberData.phone || '',
-      dateOfBirth: memberData.dateOfBirth ? new Date(memberData.dateOfBirth) : new Date(),
-      gender: memberData.gender || 'Not specified',
-      joinDate: memberData.joinDate ? new Date(memberData.joinDate) : new Date(),
+      phone: memberData.phone || "",
+      dateOfBirth: memberData.dateOfBirth
+        ? new Date(memberData.dateOfBirth)
+        : new Date(),
+      gender: memberData.gender || "Not specified",
+      joinDate: memberData.joinDate
+        ? new Date(memberData.joinDate)
+        : new Date(),
       notes: memberData.notes || null,
       isActive: memberData.isActive ?? true,
     });
@@ -52,18 +56,27 @@ class MemberService {
   }
 
   async getMemberByClerkIdAndOrg(clerkUserId, organizationId) {
-    const member = await memberRepository.findByClerkIdAndOrg(clerkUserId, organizationId);
+    const member = await memberRepository.findByClerkIdAndOrg(
+      clerkUserId,
+      organizationId,
+    );
     if (!member) {
       throw new Error("Member not found in this organization");
     }
     return member;
   }
 
-  async getAllMembers(organizationId, page = 1, limit = 10) {
+  async getAllMembers(
+    organizationId,
+    page = 1,
+    limit = 10,
+    includeInactive = true,
+  ) {
     const result = await memberRepository.findActiveMembers(
       organizationId,
       page,
       limit,
+      includeInactive,
     );
 
     return {
@@ -86,15 +99,20 @@ class MemberService {
     }
 
     const dbData = {};
-    if (updateData.firstName !== undefined) dbData.firstName = updateData.firstName;
-    if (updateData.lastName !== undefined) dbData.lastName = updateData.lastName;
+    if (updateData.firstName !== undefined)
+      dbData.firstName = updateData.firstName;
+    if (updateData.lastName !== undefined)
+      dbData.lastName = updateData.lastName;
     if (updateData.email !== undefined) dbData.email = updateData.email;
     if (updateData.phone !== undefined) dbData.phone = updateData.phone;
     if (updateData.gender !== undefined) dbData.gender = updateData.gender;
     if (updateData.notes !== undefined) dbData.notes = updateData.notes;
-    if (updateData.isActive !== undefined) dbData.isActive = updateData.isActive;
-    if (updateData.dateOfBirth !== undefined) dbData.dateOfBirth = new Date(updateData.dateOfBirth);
-    if (updateData.joinDate !== undefined) dbData.joinDate = new Date(updateData.joinDate);
+    if (updateData.isActive !== undefined)
+      dbData.isActive = updateData.isActive;
+    if (updateData.dateOfBirth !== undefined)
+      dbData.dateOfBirth = new Date(updateData.dateOfBirth);
+    if (updateData.joinDate !== undefined)
+      dbData.joinDate = new Date(updateData.joinDate);
 
     return await memberRepository.update(memberId, dbData);
   }
@@ -117,30 +135,44 @@ class MemberService {
 
     if (existingMember) {
       return await memberRepository.update(existingMember.id, {
-        email: clerkUserData.email_addresses?.[0]?.email_address || existingMember.email,
+        email:
+          clerkUserData.email_addresses?.[0]?.email_address ||
+          existingMember.email,
         firstName: clerkUserData.first_name || existingMember.firstName,
         lastName: clerkUserData.last_name || existingMember.lastName,
-        phone: clerkUserData.phone_numbers?.[0]?.phone_number || existingMember.phone,
+        phone:
+          clerkUserData.phone_numbers?.[0]?.phone_number ||
+          existingMember.phone,
       });
     }
 
     return await memberRepository.create({
       clerkUserId: clerkUserData.id,
       orgId: organizationId,
-      email: clerkUserData.email_addresses?.[0]?.email_address || '',
-      firstName: clerkUserData.first_name || '',
-      lastName: clerkUserData.last_name || '',
-      phone: clerkUserData.phone_numbers?.[0]?.phone_number || '',
+      email: clerkUserData.email_addresses?.[0]?.email_address || "",
+      firstName: clerkUserData.first_name || "",
+      lastName: clerkUserData.last_name || "",
+      phone: clerkUserData.phone_numbers?.[0]?.phone_number || "",
       dateOfBirth: new Date(),
-      gender: 'Not specified',
+      gender: "Not specified",
       joinDate: new Date(),
       notes: null,
       isActive: true,
     });
   }
 
-  async searchMembers(organizationId, searchTerm, limit = 10) {
-    return await memberRepository.searchMembers(organizationId, searchTerm, limit);
+  async searchMembers(
+    organizationId,
+    searchTerm,
+    limit = 10,
+    includeInactive = true,
+  ) {
+    return await memberRepository.searchMembers(
+      organizationId,
+      searchTerm,
+      limit,
+      includeInactive,
+    );
   }
 
   async getMemberStats(organizationId) {
