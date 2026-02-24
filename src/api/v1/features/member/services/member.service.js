@@ -1,0 +1,151 @@
+const memberRepository = require("../repositories/member.repository");
+
+class MemberService {
+  async _getMemberOrThrow(memberId, errorMessage = "Member not found") {
+    const member = await memberRepository.get(memberId);
+    if (!member) {
+      throw new Error(errorMessage);
+    }
+    return member;
+  }
+
+  async createMember(memberData) {
+    if (!memberData.orgId) {
+      throw new Error("Organization ID is required");
+    }
+
+    if (memberData.clerkUserId) {
+      const existingMember = await memberRepository.findByClerkIdAndOrg(
+        memberData.clerkUserId,
+        memberData.orgId,
+      );
+      if (existingMember) {
+        throw new Error("Member already exists in this organization");
+      }
+    }
+
+    return await memberRepository.create({
+      orgId: memberData.orgId,
+      clerkUserId: memberData.clerkUserId || null,
+      firstName: memberData.firstName,
+      lastName: memberData.lastName,
+      email: memberData.email,
+      phone: memberData.phone || '',
+      dateOfBirth: memberData.dateOfBirth ? new Date(memberData.dateOfBirth) : new Date(),
+      gender: memberData.gender || 'Not specified',
+      joinDate: memberData.joinDate ? new Date(memberData.joinDate) : new Date(),
+      notes: memberData.notes || null,
+      isActive: memberData.isActive ?? true,
+    });
+  }
+
+  async getMemberById(memberId) {
+    return await this._getMemberOrThrow(memberId);
+  }
+
+  async getMemberByClerkId(clerkUserId) {
+    const member = await memberRepository.findByClerkId(clerkUserId);
+    if (!member) {
+      throw new Error("Member not found");
+    }
+    return member;
+  }
+
+  async getMemberByClerkIdAndOrg(clerkUserId, organizationId) {
+    const member = await memberRepository.findByClerkIdAndOrg(clerkUserId, organizationId);
+    if (!member) {
+      throw new Error("Member not found in this organization");
+    }
+    return member;
+  }
+
+  async getAllMembers(organizationId, page = 1, limit = 10) {
+    const result = await memberRepository.findActiveMembers(
+      organizationId,
+      page,
+      limit,
+    );
+
+    return {
+      members: result.data,
+      pagination: result.pagination,
+    };
+  }
+
+  async updateMember(memberId, updateData) {
+    const member = await this._getMemberOrThrow(memberId);
+
+    if (updateData.email && updateData.email !== member.email) {
+      const existingMember = await memberRepository.findOne({
+        email: updateData.email,
+        orgId: member.orgId,
+      });
+      if (existingMember && existingMember.id !== memberId) {
+        throw new Error("Email is already taken in this organization");
+      }
+    }
+
+    const dbData = {};
+    if (updateData.firstName !== undefined) dbData.firstName = updateData.firstName;
+    if (updateData.lastName !== undefined) dbData.lastName = updateData.lastName;
+    if (updateData.email !== undefined) dbData.email = updateData.email;
+    if (updateData.phone !== undefined) dbData.phone = updateData.phone;
+    if (updateData.gender !== undefined) dbData.gender = updateData.gender;
+    if (updateData.notes !== undefined) dbData.notes = updateData.notes;
+    if (updateData.isActive !== undefined) dbData.isActive = updateData.isActive;
+    if (updateData.dateOfBirth !== undefined) dbData.dateOfBirth = new Date(updateData.dateOfBirth);
+    if (updateData.joinDate !== undefined) dbData.joinDate = new Date(updateData.joinDate);
+
+    return await memberRepository.update(memberId, dbData);
+  }
+
+  async deleteMember(memberId) {
+    await this._getMemberOrThrow(memberId);
+    await memberRepository.destroy(memberId);
+    return { message: "Member deleted successfully" };
+  }
+
+  async syncMemberFromClerk(clerkUserData, organizationId) {
+    if (!organizationId) {
+      throw new Error("Organization ID is required for member sync");
+    }
+
+    const existingMember = await memberRepository.findByClerkIdAndOrg(
+      clerkUserData.id,
+      organizationId,
+    );
+
+    if (existingMember) {
+      return await memberRepository.update(existingMember.id, {
+        email: clerkUserData.email_addresses?.[0]?.email_address || existingMember.email,
+        firstName: clerkUserData.first_name || existingMember.firstName,
+        lastName: clerkUserData.last_name || existingMember.lastName,
+        phone: clerkUserData.phone_numbers?.[0]?.phone_number || existingMember.phone,
+      });
+    }
+
+    return await memberRepository.create({
+      clerkUserId: clerkUserData.id,
+      orgId: organizationId,
+      email: clerkUserData.email_addresses?.[0]?.email_address || '',
+      firstName: clerkUserData.first_name || '',
+      lastName: clerkUserData.last_name || '',
+      phone: clerkUserData.phone_numbers?.[0]?.phone_number || '',
+      dateOfBirth: new Date(),
+      gender: 'Not specified',
+      joinDate: new Date(),
+      notes: null,
+      isActive: true,
+    });
+  }
+
+  async searchMembers(organizationId, searchTerm, limit = 10) {
+    return await memberRepository.searchMembers(organizationId, searchTerm, limit);
+  }
+
+  async getMemberStats(organizationId) {
+    return await memberRepository.getMemberStats(organizationId);
+  }
+}
+
+module.exports = new MemberService();

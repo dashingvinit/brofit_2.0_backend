@@ -1,225 +1,152 @@
-/**
- * Base CRUD Repository for MongoDB with Mongoose
- * Provides common database operations for all repositories
- * Each feature repository extends this class and passes a Mongoose model
- */
 class CrudRepository {
-  /**
-   * @param {mongoose.Model} model - Mongoose model for the collection
-   */
   constructor(model) {
     this.model = model;
   }
 
-  /**
-   * Transform MongoDB document to clean object with id instead of _id
-   * @param {Object} doc - Document to transform
-   * @returns {Object} Transformed document
-   */
-  _transformDocument(doc) {
-    if (!doc) return doc;
-
-    if (Array.isArray(doc)) {
-      return doc.map(d => this._transformDocument(d));
-    }
-
-    const transformed = { ...doc };
-    if (transformed._id) {
-      transformed.id = transformed._id.toString();
-      delete transformed._id;
-    }
-    if (transformed.__v !== undefined) {
-      delete transformed.__v;
-    }
-    // Transform ObjectId fields to strings
-    Object.keys(transformed).forEach(key => {
-      if (transformed[key] && typeof transformed[key] === 'object' && transformed[key].constructor.name === 'ObjectId') {
-        transformed[key] = transformed[key].toString();
-      }
-    });
-    return transformed;
-  }
-
-  /**
-   * Create a new document
-   * @param {Object} data - Data to insert
-   * @returns {Promise<Object>} Created document
-   */
   async create(data) {
     try {
-      const document = await this.model.create(data);
-      return this._transformDocument(document.toObject());
+      const record = await this.model.create({ data });
+      return record;
     } catch (error) {
-      console.log("Something went wrong in crud repo");
+      console.log("Something went wrong in crud repo:", error.message);
       throw error;
     }
   }
 
-  /**
-   * Find document by ID
-   * @param {string} id - Document ID
-   * @returns {Promise<Object|null>} Document or null
-   */
-  async get(id) {
+  async get(id, options = {}) {
     try {
-      const document = await this.model.findById(id).lean();
-      return this._transformDocument(document);
+      const record = await this.model.findUnique({
+        where: { id },
+        ...options,
+      });
+      return record;
     } catch (error) {
       throw error;
     }
   }
 
-  /**
-   * Get all documents
-   * @param {Object} options - Query options (limit, offset, orderBy)
-   * @returns {Promise<Array>} Array of documents
-   */
   async getAll(options = {}) {
     try {
-      const { limit, offset = 0, orderBy = '-createdAt' } = options;
+      const {
+        take,
+        skip = 0,
+        orderBy = { created_at: "desc" },
+        ...rest
+      } = options;
 
-      let query = this.model.find();
+      const records = await this.model.findMany({
+        take,
+        skip,
+        orderBy,
+        ...rest,
+      });
 
-      if (orderBy) {
-        query = query.sort(orderBy);
-      }
-
-      if (limit) {
-        query = query.limit(limit);
-      }
-
-      if (offset) {
-        query = query.skip(offset);
-      }
-
-      const documents = await query.lean();
-      return this._transformDocument(documents);
+      return records;
     } catch (error) {
-      console.log("Something went wrong in crud repo");
+      console.log("Something went wrong in crud repo:", error.message);
       throw error;
     }
   }
 
-  /**
-   * Update document by ID
-   * @param {string} id - Document ID
-   * @param {Object} data - Data to update
-   * @returns {Promise<Object|null>} Updated document or null
-   */
   async update(id, data) {
     try {
       if (Object.keys(data).length === 0) {
         return null;
       }
 
-      const document = await this.model.findByIdAndUpdate(
-        id,
-        { ...data, updatedAt: new Date() },
-        { new: true, runValidators: true }
-      ).lean();
+      const record = await this.model.update({
+        where: { id },
+        data,
+      });
 
-      return this._transformDocument(document);
+      return record;
     } catch (error) {
-      console.log("Something went wrong in crud repo");
+      console.log("Something went wrong in crud repo:", error.message);
       throw error;
     }
   }
 
-  /**
-   * Soft delete (set isActive = false)
-   * @param {string} id - Document ID
-   * @returns {Promise<Object|null>} Deleted document or null
-   */
   async destroy(id) {
     try {
-      const document = await this.model.findByIdAndUpdate(
-        id,
-        { isActive: false, updatedAt: new Date() },
-        { new: true }
-      ).lean();
+      const record = await this.model.update({
+        where: { id },
+        data: { is_active: false },
+      });
 
-      return document;
+      return record;
     } catch (error) {
-      console.log("Something went wrong in crud repo");
+      console.log("Something went wrong in crud repo:", error.message);
       throw error;
     }
   }
 
-  /**
-   * Hard delete (permanent deletion)
-   * @param {string} id - Document ID
-   * @returns {Promise<boolean>} Success status
-   */
   async hardDelete(id) {
     try {
-      const result = await this.model.findByIdAndDelete(id);
-      return !!result;
+      await this.model.delete({ where: { id } });
+      return true;
     } catch (error) {
-      console.log("Something went wrong in crud repo");
+      console.log("Something went wrong in crud repo:", error.message);
       throw error;
     }
   }
 
-  /**
-   * Find documents with filter
-   * @param {Object} filter - Filter conditions
-   * @param {Object} options - Query options (limit, offset, orderBy)
-   * @returns {Promise<Array>} Array of documents
-   */
-  async find(filter = {}, options = {}) {
+  async find(where = {}, options = {}) {
     try {
-      const { limit, offset = 0, orderBy = '-createdAt' } = options;
+      const {
+        take,
+        skip = 0,
+        orderBy = { created_at: "desc" },
+        ...rest
+      } = options;
 
-      let query = this.model.find(filter);
+      const records = await this.model.findMany({
+        where,
+        take,
+        skip,
+        orderBy,
+        ...rest,
+      });
 
-      if (orderBy) {
-        query = query.sort(orderBy);
-      }
-
-      if (limit) {
-        query = query.limit(limit);
-      }
-
-      if (offset) {
-        query = query.skip(offset);
-      }
-
-      const documents = await query.lean();
-      return this._transformDocument(documents);
+      return records;
     } catch (error) {
-      console.log("Something went wrong in crud repo");
+      console.log("Something went wrong in crud repo:", error.message);
       throw error;
     }
   }
 
-  /**
-   * Find one document with filter
-   * @param {Object} filter - Filter conditions
-   * @returns {Promise<Object|null>} Document or null
-   */
-  async findOne(filter) {
+  async findOne(where, options = {}) {
     try {
-      const document = await this.model.findOne(filter).lean();
-      return this._transformDocument(document);
+      const record = await this.model.findFirst({
+        where,
+        ...options,
+      });
+      return record;
     } catch (error) {
-      console.log("Something went wrong in crud repo");
+      console.log("Something went wrong in crud repo:", error.message);
       throw error;
     }
   }
 
-  /**
-   * Find documents with pagination
-   * @param {Object} filter - Filter conditions
-   * @param {Object} options - Pagination options
-   * @returns {Promise<Object>} Paginated results
-   */
-  async findWithPagination(filter = {}, options = {}) {
+  async findWithPagination(where = {}, options = {}) {
     try {
-      const { page = 1, limit = 10, orderBy = '-createdAt' } = options;
-      const offset = (page - 1) * limit;
+      const {
+        page = 1,
+        limit = 10,
+        orderBy = { created_at: "desc" },
+        ...rest
+      } = options;
+      const skip = (page - 1) * limit;
 
-      const data = await this.find(filter, { limit, offset, orderBy });
-      const total = await this.count(filter);
+      const [data, total] = await Promise.all([
+        this.model.findMany({
+          where,
+          take: limit,
+          skip,
+          orderBy,
+          ...rest,
+        }),
+        this.model.count({ where }),
+      ]);
 
       return {
         data,
@@ -233,113 +160,86 @@ class CrudRepository {
         },
       };
     } catch (error) {
-      console.log("Something went wrong in crud repo");
+      console.log("Something went wrong in crud repo:", error.message);
       throw error;
     }
   }
 
-  /**
-   * Count documents
-   * @param {Object} filter - Filter conditions
-   * @returns {Promise<number>} Count
-   */
-  async count(filter = {}) {
+  async count(where = {}) {
     try {
-      const count = await this.model.countDocuments(filter);
+      const count = await this.model.count({ where });
       return count;
     } catch (error) {
-      console.log("Something went wrong in crud repo");
+      console.log("Something went wrong in crud repo:", error.message);
       throw error;
     }
   }
 
-  /**
-   * Check if document exists
-   * @param {Object} filter - Filter conditions
-   * @returns {Promise<boolean>} Exists status
-   */
-  async exists(filter) {
+  async exists(where) {
     try {
-      const document = await this.findOne(filter);
-      return !!document;
+      const record = await this.findOne(where);
+      return !!record;
     } catch (error) {
-      console.log("Something went wrong in crud repo");
+      console.log("Something went wrong in crud repo:", error.message);
       throw error;
     }
   }
 
-  /**
-   * Update multiple documents
-   * @param {Object} filter - Filter conditions
-   * @param {Object} data - Data to update
-   * @returns {Promise<number>} Number of updated documents
-   */
-  async updateMany(filter, data) {
+  async updateMany(where, data) {
     try {
-      if (Object.keys(data).length === 0 || Object.keys(filter).length === 0) {
+      if (Object.keys(data).length === 0 || Object.keys(where).length === 0) {
         return 0;
       }
 
-      const result = await this.model.updateMany(
-        filter,
-        { ...data, updatedAt: new Date() }
-      );
+      const result = await this.model.updateMany({
+        where,
+        data,
+      });
 
-      return result.modifiedCount;
+      return result.count;
     } catch (error) {
-      console.log("Something went wrong in crud repo");
+      console.log("Something went wrong in crud repo:", error.message);
       throw error;
     }
   }
 
-  /**
-   * Delete multiple documents
-   * @param {Object} filter - Filter conditions
-   * @returns {Promise<number>} Number of deleted documents
-   */
-  async deleteMany(filter) {
+  async deleteMany(where) {
     try {
-      if (Object.keys(filter).length === 0) {
+      if (Object.keys(where).length === 0) {
         throw new Error("Filter required for deleteMany");
       }
 
-      const result = await this.model.deleteMany(filter);
-      return result.deletedCount;
+      const result = await this.model.deleteMany({ where });
+      return result.count;
     } catch (error) {
-      console.log("Something went wrong in crud repo");
+      console.log("Something went wrong in crud repo:", error.message);
       throw error;
     }
   }
 
-  /**
-   * Insert multiple documents
-   * @param {Array<Object>} dataArray - Array of data to insert
-   * @returns {Promise<Array>} Array of created documents
-   */
   async insertMany(dataArray) {
     try {
       if (!Array.isArray(dataArray) || dataArray.length === 0) {
-        return [];
+        return 0;
       }
 
-      const documents = await this.model.insertMany(dataArray);
-      return documents.map(doc => doc.toObject());
+      const result = await this.model.createMany({
+        data: dataArray,
+        skipDuplicates: true,
+      });
+
+      return result.count;
     } catch (error) {
-      console.log("Something went wrong in crud repo");
+      console.log("Something went wrong in crud repo:", error.message);
       throw error;
     }
   }
 
-  /**
-   * Execute raw query using Mongoose methods
-   * @param {Function} queryFn - Function that takes the model and returns a query
-   * @returns {Promise<any>} Query result
-   */
   async rawQuery(queryFn) {
     try {
       return await queryFn(this.model);
     } catch (error) {
-      console.log("Something went wrong in crud repo");
+      console.log("Something went wrong in crud repo:", error.message);
       throw error;
     }
   }
