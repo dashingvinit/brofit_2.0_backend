@@ -51,6 +51,7 @@ backend/
 ### Architecture
 
 **Feature-Based Structure**: Each feature (user, classes, subscriptions, etc.) is self-contained with its own:
+
 - **Controllers**: Handle HTTP requests/responses
 - **Services**: Business logic layer
 - **Repositories**: Database operations
@@ -59,6 +60,7 @@ backend/
 - **Routes**: API endpoints
 
 This structure promotes:
+
 - **Scalability**: Easy to add new features
 - **Maintainability**: Clear separation of concerns
 - **Testability**: Isolated components
@@ -83,10 +85,12 @@ cp .env.example .env
 Update the following variables in `.env`:
 
 **Clerk Authentication:**
+
 - `CLERK_PUBLISHABLE_KEY`: Get from [Clerk Dashboard](https://dashboard.clerk.com)
 - `CLERK_SECRET_KEY`: Get from [Clerk Dashboard](https://dashboard.clerk.com)
 
 **PostgreSQL Database:**
+
 - `DB_HOST`: Database host (default: localhost)
 - `DB_PORT`: Database port (default: 5432)
 - `DB_NAME`: Database name (default: brofit_gym)
@@ -112,6 +116,7 @@ This will create all necessary tables and indexes.
 ### 4. Run the Server
 
 Development mode:
+
 ```bash
 npm start
 ```
@@ -129,15 +134,8 @@ The server will start at `http://localhost:5000`
 ### User Routes (`/api/v1/users`)
 
 **Public:**
-- `POST /api/v1/users/webhook/clerk` - Clerk webhook handler
 
-**Protected (requires authentication):**
-- `GET /api/v1/users/me` - Get current authenticated user
-- `GET /api/v1/users` - Get all users (admin only)
-- `GET /api/v1/users/:id` - Get user by ID (admin or owner)
-- `POST /api/v1/users` - Create new user
-- `PATCH /api/v1/users/:id` - Update user (admin or owner)
-- `DELETE /api/v1/users/:id` - Delete user (admin only)
+- `POST /api/v1/users/webhook/clerk` - Clerk webhook handler
 
 ### Adding New Features
 
@@ -156,20 +154,20 @@ To add a new feature (e.g., `classes`):
 
 ## Environment Variables
 
-| Variable | Description | Required | Default |
-|----------|-------------|----------|---------|
-| `NODE_ENV` | Environment mode | Yes | development |
-| `PORT` | Server port | Yes | 5000 |
-| `CLERK_PUBLISHABLE_KEY` | Clerk publishable key | No | - |
-| `CLERK_SECRET_KEY` | Clerk secret key | Yes | - |
-| `DB_HOST` | PostgreSQL host | Yes | localhost |
-| `DB_PORT` | PostgreSQL port | Yes | 5432 |
-| `DB_NAME` | Database name | Yes | brofit_gym |
-| `DB_USER` | Database user | Yes | postgres |
-| `DB_PASSWORD` | Database password | Yes | - |
-| `DB_SSL` | Enable SSL for DB | No | false |
-| `CLIENT_URL` | Frontend URL | No | http://localhost:3000 |
-| `MOBILE_CLIENT_URL` | Mobile app URL | No | http://localhost:19006 |
+| Variable                | Description           | Required | Default                |
+| ----------------------- | --------------------- | -------- | ---------------------- |
+| `NODE_ENV`              | Environment mode      | Yes      | development            |
+| `PORT`                  | Server port           | Yes      | 5000                   |
+| `CLERK_PUBLISHABLE_KEY` | Clerk publishable key | No       | -                      |
+| `CLERK_SECRET_KEY`      | Clerk secret key      | Yes      | -                      |
+| `DB_HOST`               | PostgreSQL host       | Yes      | localhost              |
+| `DB_PORT`               | PostgreSQL port       | Yes      | 5432                   |
+| `DB_NAME`               | Database name         | Yes      | brofit_gym             |
+| `DB_USER`               | Database user         | Yes      | postgres               |
+| `DB_PASSWORD`           | Database password     | Yes      | -                      |
+| `DB_SSL`                | Enable SSL for DB     | No       | false                  |
+| `CLIENT_URL`            | Frontend URL          | No       | http://localhost:3000  |
+| `MOBILE_CLIENT_URL`     | Mobile app URL        | No       | http://localhost:19006 |
 
 ## Features
 
