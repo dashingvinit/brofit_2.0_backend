@@ -13,13 +13,4 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Basic User model for testing - you can modify this later
-model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  @@map("users")
-}
+// Add your models here
