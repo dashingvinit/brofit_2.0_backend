@@ -7,87 +7,93 @@ const router = express.Router();
 /**
  * Plan Routes
  * Base path: /api/v1/plans
- * Manages both membership and training plan catalogs
+ * Manages plan types (categories like Cardio, Strength) and their variants (duration + price tiers)
  */
 
 // All routes require authentication
 router.use(requireAuth());
 
 // ============================================
-// MEMBERSHIP PLAN ROUTES
+// PLAN TYPE ROUTES
 // ============================================
 
-// Get active membership plans (available to all authenticated users)
-router.get("/memberships", planController.getActiveMembershipPlans);
+// Get active plan types (available to all authenticated users)
+router.get("/types", planController.getActivePlanTypes);
 
-// Get all membership plans including inactive (admin only)
+// Get all plan types including inactive (admin only)
 router.get(
-  "/memberships/all",
+  "/types/all",
   checkRole(["admin"]),
-  planController.getAllMembershipPlans
+  planController.getAllPlanTypes
 );
 
-// Get membership plan by ID
-router.get("/memberships/:id", planController.getMembershipPlanById);
+// Get plan type by ID (with variants)
+router.get("/types/:id", planController.getPlanTypeById);
 
-// Create membership plan (admin only)
+// Create plan type (admin only)
 router.post(
-  "/memberships",
+  "/types",
   checkRole(["admin"]),
-  planController.createMembershipPlan
+  planController.createPlanType
 );
 
-// Update membership plan (admin only)
+// Update plan type (admin only)
 router.patch(
-  "/memberships/:id",
+  "/types/:id",
   checkRole(["admin"]),
-  planController.updateMembershipPlan
+  planController.updatePlanType
 );
 
-// Deactivate membership plan (admin only)
+// Delete plan type (admin only)
 router.delete(
-  "/memberships/:id",
+  "/types/:id",
   checkRole(["admin"]),
-  planController.deactivateMembershipPlan
+  planController.deletePlanType
+);
+
+// Deactivate plan type (admin only)
+router.put(
+  "/types/:id/deactivate",
+  checkRole(["admin"]),
+  planController.deactivatePlanType
 );
 
 // ============================================
-// TRAINING PLAN ROUTES
+// PLAN VARIANT ROUTES
 // ============================================
 
-// Get active training plans (available to all authenticated users)
-// Optional query param: ?category=weight-training
-router.get("/trainings", planController.getActiveTrainingPlans);
+// Get variants for a specific plan type
+router.get("/types/:planTypeId/variants", planController.getVariantsByPlanType);
 
-// Get all training plans including inactive (admin only)
-router.get(
-  "/trainings/all",
-  checkRole(["admin"]),
-  planController.getAllTrainingPlans
-);
-
-// Get training plan by ID
-router.get("/trainings/:id", planController.getTrainingPlanById);
-
-// Create training plan (admin only)
+// Create variant for a plan type (admin only)
 router.post(
-  "/trainings",
+  "/types/:planTypeId/variants",
   checkRole(["admin"]),
-  planController.createTrainingPlan
+  planController.createVariant
 );
 
-// Update training plan (admin only)
+// Get variant by ID
+router.get("/variants/:id", planController.getVariantById);
+
+// Update variant (admin only)
 router.patch(
-  "/trainings/:id",
+  "/variants/:id",
   checkRole(["admin"]),
-  planController.updateTrainingPlan
+  planController.updateVariant
 );
 
-// Deactivate training plan (admin only)
+// Delete variant (admin only)
 router.delete(
-  "/trainings/:id",
+  "/variants/:id",
   checkRole(["admin"]),
-  planController.deactivateTrainingPlan
+  planController.deleteVariant
+);
+
+// Deactivate variant (admin only)
+router.put(
+  "/variants/:id/deactivate",
+  checkRole(["admin"]),
+  planController.deactivateVariant
 );
 
 module.exports = router;

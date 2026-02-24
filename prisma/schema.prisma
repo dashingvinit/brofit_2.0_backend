@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -20,7 +14,8 @@ model Organization {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  members Member[]
+  members   Member[]
+  planTypes PlanType[]
 
   @@map("organizations")
 }
@@ -47,4 +42,36 @@ model Member {
   @@index([phone])
   @@index([clerkUserId])
   @@map("members")
+}
+
+model PlanType {
+  id          String    @id @default(uuid())
+  orgId       String    @map("org_id")
+  name        String
+  description String?
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  organization Organization   @relation(fields: [orgId], references: [id])
+  variants     PlanVariant[]
+
+  @@index([orgId])
+  @@index([isActive])
+  @@map("plan_types")
+}
+
+model PlanVariant {
+  id            String   @id @default(uuid())
+  planTypeId    String   @map("plan_type_id")
+  durationDays  Int      @map("duration_days")
+  durationLabel String   @map("duration_label")
+  price         Float
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  planType PlanType @relation(fields: [planTypeId], references: [id], onDelete: Cascade)
+
+  @@index([planTypeId])
+  @@index([isActive])
+  @@map("plan_variants")
 }
