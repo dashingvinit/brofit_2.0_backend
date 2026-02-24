@@ -1,6 +1,5 @@
 const planTypeService = require("../services/plan-type.service");
 const planVariantService = require("../services/plan-variant.service");
-const { getAuth } = require("@clerk/express");
 
 /**
  * Plan Controller
@@ -27,8 +26,7 @@ class PlanController {
   }
 
   _getOrgId(req) {
-    const auth = getAuth(req);
-    return auth.orgId || auth.sessionClaims?.org_id;
+    return req.auth?.orgId || req.auth?.sessionClaims?.org_id;
   }
 
   // ============================================

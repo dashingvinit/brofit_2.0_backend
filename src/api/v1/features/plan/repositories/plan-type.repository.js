@@ -66,6 +66,11 @@ class PlanTypeRepository extends CrudRepository {
       }
     );
   }
+
+  // Override destroy to use hardDelete since we want to actually delete plan types
+  async destroy(id) {
+    return await this.hardDelete(id);
+  }
 }
 
 module.exports = new PlanTypeRepository();
