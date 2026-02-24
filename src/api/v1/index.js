@@ -1,4 +1,6 @@
 const express = require("express");
+const memberRoutes = require("./features/member/member.routes");
+const planRoutes = require("./features/plan/plan.routes");
 
 const router = express.Router();
 
@@ -10,5 +12,9 @@ router.get("/health", (req, res) => {
     timestamp: new Date().toISOString(),
   });
 });
+
+// Feature routes
+router.use("/members", memberRoutes);
+router.use("/plans", planRoutes);
 
 module.exports = router;

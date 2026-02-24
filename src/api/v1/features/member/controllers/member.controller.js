@@ -1,4 +1,5 @@
 const memberService = require("../services/member.service");
+const { getAuth } = require("@clerk/express");
 
 /**
  * Member Controller
@@ -7,24 +8,61 @@ const memberService = require("../services/member.service");
  */
 
 class MemberController {
+  constructor() {
+    this.createMember = this.createMember.bind(this);
+    this.getAllMembers = this.getAllMembers.bind(this);
+    this.getMemberById = this.getMemberById.bind(this);
+    this.updateMember = this.updateMember.bind(this);
+    this.deleteMember = this.deleteMember.bind(this);
+    this.searchMembers = this.searchMembers.bind(this);
+    this.getMemberStats = this.getMemberStats.bind(this);
+  }
+
+  _getOrgId(req) {
+    const auth = getAuth(req);
+    return auth.orgId || auth.sessionClaims?.org_id;
+  }
   /**
    * Create a new member in the organization
    * POST /api/v1/members
    */
   async createMember(req, res, next) {
     try {
+      const auth = getAuth(req);
+      const orgId = this._getOrgId(req);
+
+      // Ensure organization exists (auto-create from Clerk data if needed)
+      const { PrismaClient } = require("@prisma/client");
+      const prisma = new PrismaClient();
+
+      const existingOrg = await prisma.organization.findUnique({
+        where: { id: orgId },
+      });
+
+      if (!existingOrg) {
+        await prisma.organization.create({
+          data: {
+            id: orgId,
+            name: auth.orgSlug || `Organization ${orgId}`,
+            ownerUserId: auth.userId,
+          },
+        });
+      }
+
+      await prisma.$disconnect();
+
       const memberData = {
-        org_id: req.body.org_id,
-        clerk_user_id: req.body.clerk_user_id || null,
-        first_name: req.body.first_name,
-        last_name: req.body.last_name,
+        orgId,
+        clerkUserId: req.body.clerkUserId || null,
+        firstName: req.body.firstName,
+        lastName: req.body.lastName,
         email: req.body.email,
         phone: req.body.phone,
-        date_of_birth: req.body.date_of_birth,
+        dateOfBirth: req.body.dateOfBirth,
         gender: req.body.gender,
-        join_date: req.body.join_date || new Date(),
+        joinDate: req.body.joinDate || new Date(),
         notes: req.body.notes || null,
-        is_active: req.body.is_active !== undefined ? req.body.is_active : true,
+        isActive: req.body.isActive !== undefined ? req.body.isActive : true,
       };
 
       const member = await memberService.createMember(memberData);
@@ -41,11 +79,11 @@ class MemberController {
 
   /**
    * Get all members in an organization
-   * GET /api/v1/members?org_id=xxx&page=1&limit=10
+   * GET /api/v1/members?org_id=xxx&page=1&limit=10&includeInactive=true
    */
   async getAllMembers(req, res, next) {
     try {
-      const organizationId = req.query.org_id;
+      const organizationId = this._getOrgId(req);
 
       if (!organizationId) {
         return res.status(400).json({
@@ -56,8 +94,14 @@ class MemberController {
 
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 10;
+      const includeInactive = req.query.includeInactive !== "false"; // Default to true
 
-      const result = await memberService.getAllMembers(organizationId, page, limit);
+      const result = await memberService.getAllMembers(
+        organizationId,
+        page,
+        limit,
+        includeInactive,
+      );
 
       res.status(200).json({
         success: true,
@@ -97,15 +141,20 @@ class MemberController {
       const updateData = {};
 
       // Map all possible update fields
-      if (req.body.first_name !== undefined) updateData.first_name = req.body.first_name;
-      if (req.body.last_name !== undefined) updateData.last_name = req.body.last_name;
+      if (req.body.firstName !== undefined)
+        updateData.firstName = req.body.firstName;
+      if (req.body.lastName !== undefined)
+        updateData.lastName = req.body.lastName;
       if (req.body.email !== undefined) updateData.email = req.body.email;
       if (req.body.phone !== undefined) updateData.phone = req.body.phone;
-      if (req.body.date_of_birth !== undefined) updateData.date_of_birth = req.body.date_of_birth;
+      if (req.body.dateOfBirth !== undefined)
+        updateData.dateOfBirth = req.body.dateOfBirth;
       if (req.body.gender !== undefined) updateData.gender = req.body.gender;
-      if (req.body.join_date !== undefined) updateData.join_date = req.body.join_date;
+      if (req.body.joinDate !== undefined)
+        updateData.joinDate = req.body.joinDate;
       if (req.body.notes !== undefined) updateData.notes = req.body.notes;
-      if (req.body.is_active !== undefined) updateData.is_active = req.body.is_active;
+      if (req.body.isActive !== undefined)
+        updateData.isActive = req.body.isActive;
 
       const member = await memberService.updateMember(id, updateData);
 
@@ -139,13 +188,14 @@ class MemberController {
 
   /**
    * Search members within an organization
-   * GET /api/v1/members/search?org_id=xxx&q=searchTerm
+   * GET /api/v1/members/search?org_id=xxx&q=searchTerm&includeInactive=true
    */
   async searchMembers(req, res, next) {
     try {
-      const organizationId = req.query.org_id;
+      const organizationId = this._getOrgId(req);
       const searchTerm = req.query.q;
       const limit = parseInt(req.query.limit) || 10;
+      const includeInactive = req.query.includeInactive !== "false"; // Default to true
 
       if (!organizationId) {
         return res.status(400).json({
@@ -161,7 +211,12 @@ class MemberController {
         });
       }
 
-      const members = await memberService.searchMembers(organizationId, searchTerm, limit);
+      const members = await memberService.searchMembers(
+        organizationId,
+        searchTerm,
+        limit,
+        includeInactive,
+      );
 
       res.status(200).json({
         success: true,
@@ -178,7 +233,7 @@ class MemberController {
    */
   async getMemberStats(req, res, next) {
     try {
-      const organizationId = req.query.org_id;
+      const organizationId = this._getOrgId(req);
 
       if (!organizationId) {
         return res.status(400).json({

@@ -6,15 +6,6 @@ const config = require("../../config/env.config");
 const errorHandler = (err, req, res, next) => {
   let { statusCode = 500, message } = err;
 
-  // Log error for debugging
-  console.error("Error:", {
-    message: err.message,
-    stack: err.stack,
-    statusCode,
-    path: req.path,
-    method: req.method,
-  });
-
   // Handle specific error types
   if (err.name === "ValidationError") {
     statusCode = 400;
