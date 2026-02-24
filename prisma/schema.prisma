@@ -13,4 +13,37 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Add your models here
+model Organization {
+  id        String   @id @default(uuid())
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  members Member[]
+
+  @@map("organizations")
+}
+
+model Member {
+  id            String    @id @default(uuid())
+  orgId         String    @map("org_id")
+  clerkUserId   String?   @map("clerk_user_id")
+  firstName     String    @map("first_name")
+  lastName      String    @map("last_name")
+  phone         String
+  email         String
+  dateOfBirth   DateTime  @map("date_of_birth")
+  gender        String
+  joinDate      DateTime  @map("join_date")
+  notes         String?
+  isActive      Boolean   @default(true) @map("is_active")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  organization  Organization @relation(fields: [orgId], references: [id])
+
+  @@index([orgId])
+  @@index([phone])
+  @@index([clerkUserId])
+  @@map("members")
+}
