@@ -43,6 +43,11 @@ class PlanVariantRepository extends CrudRepository {
       },
     });
   }
+
+  // Override destroy to use hardDelete since we want to actually delete variants
+  async destroy(id) {
+    return await this.hardDelete(id);
+  }
 }
 
 module.exports = new PlanVariantRepository();
