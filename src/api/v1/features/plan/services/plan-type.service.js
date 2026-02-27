@@ -17,10 +17,12 @@ class PlanTypeService {
     // Check if plan type with same name already exists in this org
     const existingPlanType = await planTypeRepository.findByNameAndOrg(
       planTypeData.name,
-      planTypeData.orgId
+      planTypeData.orgId,
     );
     if (existingPlanType) {
-      throw new Error("Plan type with this name already exists in this organization");
+      throw new Error(
+        "Plan type with this name already exists in this organization",
+      );
     }
 
     return await planTypeRepository.create({
@@ -33,7 +35,8 @@ class PlanTypeService {
 
   async getPlanTypeById(planTypeId, includeVariants = true) {
     if (includeVariants) {
-      const planType = await planTypeRepository.findByIdWithVariants(planTypeId);
+      const planType =
+        await planTypeRepository.findByIdWithVariants(planTypeId);
       if (!planType) {
         throw new Error("Plan type not found");
       }
@@ -43,11 +46,17 @@ class PlanTypeService {
   }
 
   async getAllPlanTypes(organizationId, includeInactive = false) {
-    return await planTypeRepository.findByOrganization(organizationId, includeInactive);
+    return await planTypeRepository.findByOrganization(
+      organizationId,
+      includeInactive,
+    );
   }
 
   async getActivePlanTypes(organizationId, category = null) {
-    return await planTypeRepository.findActiveByOrganization(organizationId, category);
+    return await planTypeRepository.findActiveByOrganization(
+      organizationId,
+      category,
+    );
   }
 
   async updatePlanType(planTypeId, updateData) {
@@ -57,16 +66,19 @@ class PlanTypeService {
     if (updateData.name && updateData.name !== planType.name) {
       const existingPlanType = await planTypeRepository.findByNameAndOrg(
         updateData.name,
-        planType.orgId
+        planType.orgId,
       );
       if (existingPlanType && existingPlanType.id !== planTypeId) {
-        throw new Error("Plan type with this name already exists in this organization");
+        throw new Error(
+          "Plan type with this name already exists in this organization",
+        );
       }
     }
 
     const dbData = {};
     if (updateData.name !== undefined) dbData.name = updateData.name;
-    if (updateData.description !== undefined) dbData.description = updateData.description;
+    if (updateData.description !== undefined)
+      dbData.description = updateData.description;
     if (updateData.category !== undefined) {
       // make sure the provided category is valid; default enum in Prisma
       // already enforces it but a quick sanity check here doesn't hurt.
@@ -75,7 +87,8 @@ class PlanTypeService {
       }
       dbData.category = updateData.category;
     }
-    if (updateData.isActive !== undefined) dbData.isActive = updateData.isActive;
+    if (updateData.isActive !== undefined)
+      dbData.isActive = updateData.isActive;
 
     return await planTypeRepository.update(planTypeId, dbData);
   }
