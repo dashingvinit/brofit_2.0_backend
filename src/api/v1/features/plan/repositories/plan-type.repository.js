@@ -49,12 +49,16 @@ class PlanTypeRepository extends CrudRepository {
     });
   }
 
-  async findActiveByOrganization(organizationId) {
+  async findActiveByOrganization(organizationId, category = null) {
+    const whereClause = {
+      orgId: organizationId,
+      isActive: true,
+    };
+    if (category) {
+      whereClause.category = category;
+    }
     return await this.find(
-      {
-        orgId: organizationId,
-        isActive: true,
-      },
+      whereClause,
       {
         orderBy: { createdAt: "desc" },
         include: {
