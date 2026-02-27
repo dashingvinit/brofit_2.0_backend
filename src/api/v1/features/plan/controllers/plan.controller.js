@@ -51,7 +51,10 @@ class PlanController {
       // ensure category is explicitly provided and valid.  defaulting
       // silently to "membership" caused training plans to be misclassified.
       const providedCategory = req.body.category;
-      if (!providedCategory || !["membership", "training"].includes(providedCategory)) {
+      if (
+        !providedCategory ||
+        !["membership", "training"].includes(providedCategory)
+      ) {
         return res.status(400).json({
           success: false,
           message: "Valid plan category (membership or training) is required",
@@ -94,7 +97,10 @@ class PlanController {
       }
 
       const includeInactive = req.query.includeInactive !== "false";
-      const planTypes = await planTypeService.getAllPlanTypes(orgId, includeInactive);
+      const planTypes = await planTypeService.getAllPlanTypes(
+        orgId,
+        includeInactive,
+      );
 
       res.status(200).json({
         success: true,
@@ -121,7 +127,10 @@ class PlanController {
       }
 
       const { category } = req.query;
-      const planTypes = await planTypeService.getActivePlanTypes(orgId, category || null);
+      const planTypes = await planTypeService.getActivePlanTypes(
+        orgId,
+        category || null,
+      );
 
       res.status(200).json({
         success: true,
@@ -160,9 +169,12 @@ class PlanController {
       const updateData = {};
 
       if (req.body.name !== undefined) updateData.name = req.body.name;
-      if (req.body.description !== undefined) updateData.description = req.body.description;
-      if (req.body.category !== undefined) updateData.category = req.body.category;
-      if (req.body.isActive !== undefined) updateData.isActive = req.body.isActive;
+      if (req.body.description !== undefined)
+        updateData.description = req.body.description;
+      if (req.body.category !== undefined)
+        updateData.category = req.body.category;
+      if (req.body.isActive !== undefined)
+        updateData.isActive = req.body.isActive;
 
       const planType = await planTypeService.updatePlanType(id, updateData);
 
@@ -256,7 +268,7 @@ class PlanController {
 
       const variants = await planVariantService.getVariantsByPlanType(
         planTypeId,
-        includeInactive
+        includeInactive,
       );
 
       res.status(200).json({
@@ -295,10 +307,13 @@ class PlanController {
       const { id } = req.params;
       const updateData = {};
 
-      if (req.body.durationDays !== undefined) updateData.durationDays = req.body.durationDays;
-      if (req.body.durationLabel !== undefined) updateData.durationLabel = req.body.durationLabel;
+      if (req.body.durationDays !== undefined)
+        updateData.durationDays = req.body.durationDays;
+      if (req.body.durationLabel !== undefined)
+        updateData.durationLabel = req.body.durationLabel;
       if (req.body.price !== undefined) updateData.price = req.body.price;
-      if (req.body.isActive !== undefined) updateData.isActive = req.body.isActive;
+      if (req.body.isActive !== undefined)
+        updateData.isActive = req.body.isActive;
 
       const variant = await planVariantService.updateVariant(id, updateData);
 
