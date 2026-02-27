@@ -37,6 +37,9 @@ model Member {
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
   organization  Organization @relation(fields: [orgId], references: [id])
+  memberships   Membership[]
+  trainings     Training[]
+  payments      Payment[]
 
   @@index([orgId])
   @@index([phone])
@@ -52,11 +55,14 @@ model PlanType {
   isActive    Boolean   @default(true) @map("is_active")
   createdAt   DateTime  @default(now()) @map("created_at")
 
+  category    PlanCategory @default(membership)
+
   organization Organization   @relation(fields: [orgId], references: [id])
   variants     PlanVariant[]
 
   @@index([orgId])
   @@index([isActive])
+  @@index([category])
   @@map("plan_types")
 }
 
@@ -69,9 +75,122 @@ model PlanVariant {
   isActive      Boolean  @default(true) @map("is_active")
   createdAt     DateTime @default(now()) @map("created_at")
 
-  planType PlanType @relation(fields: [planTypeId], references: [id], onDelete: Cascade)
+  planType    PlanType     @relation(fields: [planTypeId], references: [id], onDelete: Cascade)
+  memberships Membership[]
+  trainings   Training[]
 
   @@index([planTypeId])
   @@index([isActive])
   @@map("plan_variants")
+}
+
+enum PlanCategory {
+  membership
+  training
+}
+
+enum MembershipStatus {
+  active
+  expired
+  cancelled
+  frozen
+}
+
+enum TrainingStatus {
+  active
+  expired
+  cancelled
+  frozen
+}
+
+enum PaymentMethod {
+  cash
+  card
+  upi
+  bank_transfer
+  other
+}
+
+enum PaymentStatus {
+  paid
+  pending
+  failed
+  refunded
+}
+
+model Membership {
+  id              String           @id @default(uuid())
+  orgId           String           @map("org_id")
+  memberId        String           @map("member_id")
+  planVariantId   String           @map("plan_variant_id")
+  startDate       DateTime         @map("start_date")
+  endDate         DateTime         @map("end_date")
+  status          MembershipStatus @default(active)
+  priceAtPurchase Float            @map("price_at_purchase")
+  discountAmount  Float            @default(0) @map("discount_amount")
+  finalPrice      Float            @map("final_price")
+  autoRenew       Boolean          @default(false) @map("auto_renew")
+  notes           String?
+  createdAt       DateTime         @default(now()) @map("created_at")
+  updatedAt       DateTime         @updatedAt @map("updated_at")
+
+  member      Member      @relation(fields: [memberId], references: [id])
+  planVariant PlanVariant @relation(fields: [planVariantId], references: [id])
+  payments    Payment[]
+
+  @@index([memberId])
+  @@index([status])
+  @@index([endDate])
+  @@map("memberships")
+}
+
+model Training {
+  id              String         @id @default(uuid())
+  orgId           String         @map("org_id")
+  memberId        String         @map("member_id")
+  planVariantId   String         @map("plan_variant_id")
+  trainerName     String         @map("trainer_name")
+  startDate       DateTime       @map("start_date")
+  endDate         DateTime       @map("end_date")
+  status          TrainingStatus @default(active)
+  priceAtPurchase Float          @map("price_at_purchase")
+  discountAmount  Float          @default(0) @map("discount_amount")
+  finalPrice      Float          @map("final_price")
+  autoRenew       Boolean        @default(false) @map("auto_renew")
+  notes           String?
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  member      Member      @relation(fields: [memberId], references: [id])
+  planVariant PlanVariant @relation(fields: [planVariantId], references: [id])
+  payments    Payment[]
+
+  @@index([memberId])
+  @@index([status])
+  @@index([endDate])
+  @@map("trainings")
+}
+
+model Payment {
+  id           String        @id @default(uuid())
+  orgId        String        @map("org_id")
+  memberId     String        @map("member_id")
+  membershipId String?       @map("membership_id")
+  trainingId   String?       @map("training_id")
+  amount       Float
+  method       PaymentMethod
+  status       PaymentStatus @default(pending)
+  reference    String?
+  notes        String?
+  paidAt       DateTime?     @map("paid_at")
+  createdAt    DateTime      @default(now()) @map("created_at")
+
+  member     Member      @relation(fields: [memberId], references: [id])
+  membership Membership? @relation(fields: [membershipId], references: [id])
+  training   Training?   @relation(fields: [trainingId], references: [id])
+
+  @@index([memberId])
+  @@index([membershipId])
+  @@index([trainingId])
+  @@map("payments")
 }

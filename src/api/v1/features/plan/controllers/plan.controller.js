@@ -48,10 +48,21 @@ class PlanController {
         });
       }
 
+      // ensure category is explicitly provided and valid.  defaulting
+      // silently to "membership" caused training plans to be misclassified.
+      const providedCategory = req.body.category;
+      if (!providedCategory || !["membership", "training"].includes(providedCategory)) {
+        return res.status(400).json({
+          success: false,
+          message: "Valid plan category (membership or training) is required",
+        });
+      }
+
       const planTypeData = {
         orgId,
         name: req.body.name,
         description: req.body.description,
+        category: providedCategory,
         isActive: req.body.isActive !== undefined ? req.body.isActive : true,
       };
 
@@ -109,7 +120,8 @@ class PlanController {
         });
       }
 
-      const planTypes = await planTypeService.getActivePlanTypes(orgId);
+      const { category } = req.query;
+      const planTypes = await planTypeService.getActivePlanTypes(orgId, category || null);
 
       res.status(200).json({
         success: true,
@@ -149,6 +161,7 @@ class PlanController {
 
       if (req.body.name !== undefined) updateData.name = req.body.name;
       if (req.body.description !== undefined) updateData.description = req.body.description;
+      if (req.body.category !== undefined) updateData.category = req.body.category;
       if (req.body.isActive !== undefined) updateData.isActive = req.body.isActive;
 
       const planType = await planTypeService.updatePlanType(id, updateData);

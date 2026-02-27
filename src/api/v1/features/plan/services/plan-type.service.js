@@ -46,8 +46,8 @@ class PlanTypeService {
     return await planTypeRepository.findByOrganization(organizationId, includeInactive);
   }
 
-  async getActivePlanTypes(organizationId) {
-    return await planTypeRepository.findActiveByOrganization(organizationId);
+  async getActivePlanTypes(organizationId, category = null) {
+    return await planTypeRepository.findActiveByOrganization(organizationId, category);
   }
 
   async updatePlanType(planTypeId, updateData) {
@@ -67,6 +67,14 @@ class PlanTypeService {
     const dbData = {};
     if (updateData.name !== undefined) dbData.name = updateData.name;
     if (updateData.description !== undefined) dbData.description = updateData.description;
+    if (updateData.category !== undefined) {
+      // make sure the provided category is valid; default enum in Prisma
+      // already enforces it but a quick sanity check here doesn't hurt.
+      if (!["membership", "training"].includes(updateData.category)) {
+        throw new Error("Invalid plan category");
+      }
+      dbData.category = updateData.category;
+    }
     if (updateData.isActive !== undefined) dbData.isActive = updateData.isActive;
 
     return await planTypeRepository.update(planTypeId, dbData);
