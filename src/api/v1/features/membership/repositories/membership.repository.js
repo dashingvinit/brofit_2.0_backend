@@ -82,9 +82,9 @@ class MembershipRepository extends CrudRepository {
 
   async getMembershipStats(orgId) {
     const now = new Date();
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
+    const year = now.getUTCFullYear();
+    const month = now.getUTCMonth();
+    const startOfMonth = new Date(Date.UTC(year, month, 1, 0, 0, 0, 0));
 
     const [total, active, expired, cancelled, newThisMonth] =
       await Promise.all([
