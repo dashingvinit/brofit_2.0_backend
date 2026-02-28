@@ -61,9 +61,11 @@ class TrainingPaymentRepository extends CrudRepository {
   }
 
   async getPaymentStats(orgId) {
-    const startOfMonth = new Date();
-    startOfMonth.setDate(1);
-    startOfMonth.setHours(0, 0, 0, 0);
+    // Calculate start of current month in UTC
+    const now = new Date();
+    const year = now.getUTCFullYear();
+    const month = now.getUTCMonth();
+    const startOfMonth = new Date(Date.UTC(year, month, 1, 0, 0, 0, 0));
 
     const [totalCollected, collectedThisMonth] = await Promise.all([
       prisma.payment.aggregate({
