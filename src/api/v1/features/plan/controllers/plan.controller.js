@@ -1,10 +1,7 @@
 const planTypeService = require("../services/plan-type.service");
 const planVariantService = require("../services/plan-variant.service");
+const { requireOrgId } = require("../../../../../shared/helpers/auth.helper");
 
-/**
- * Plan Controller
- * Handles HTTP requests for plan types and plan variants
- */
 class PlanController {
   constructor() {
     // Plan Type methods
@@ -25,10 +22,6 @@ class PlanController {
     this.deactivateVariant = this.deactivateVariant.bind(this);
   }
 
-  _getOrgId(req) {
-    return req.auth?.orgId || req.auth?.sessionClaims?.org_id;
-  }
-
   // ============================================
   // PLAN TYPE ENDPOINTS
   // ============================================
@@ -39,14 +32,8 @@ class PlanController {
    */
   async createPlanType(req, res, next) {
     try {
-      const orgId = this._getOrgId(req);
-
-      if (!orgId) {
-        return res.status(403).json({
-          success: false,
-          message: "Organization context required",
-        });
-      }
+      const orgId = requireOrgId(req, res);
+      if (!orgId) return;
 
       // ensure category is explicitly provided and valid.  defaulting
       // silently to "membership" caused training plans to be misclassified.
@@ -87,14 +74,8 @@ class PlanController {
    */
   async getAllPlanTypes(req, res, next) {
     try {
-      const orgId = this._getOrgId(req);
-
-      if (!orgId) {
-        return res.status(403).json({
-          success: false,
-          message: "Organization context required",
-        });
-      }
+      const orgId = requireOrgId(req, res);
+      if (!orgId) return;
 
       const includeInactive = req.query.includeInactive !== "false";
       const planTypes = await planTypeService.getAllPlanTypes(
@@ -117,14 +98,8 @@ class PlanController {
    */
   async getActivePlanTypes(req, res, next) {
     try {
-      const orgId = this._getOrgId(req);
-
-      if (!orgId) {
-        return res.status(403).json({
-          success: false,
-          message: "Organization context required",
-        });
-      }
+      const orgId = requireOrgId(req, res);
+      if (!orgId) return;
 
       const { category } = req.query;
       const planTypes = await planTypeService.getActivePlanTypes(

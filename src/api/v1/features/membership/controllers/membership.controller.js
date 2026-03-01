@@ -152,17 +152,9 @@ class MembershipController {
   async updateMembership(req, res, next) {
     try {
       const { id } = req.params;
-      const updateData = {};
-
-      if (req.body.status !== undefined) updateData.status = req.body.status;
-      if (req.body.autoRenew !== undefined)
-        updateData.autoRenew = req.body.autoRenew;
-      if (req.body.notes !== undefined) updateData.notes = req.body.notes;
-      if (req.body.endDate !== undefined) updateData.endDate = req.body.endDate;
-
       const membership = await membershipService.updateMembership(
         id,
-        updateData,
+        req.body,
       );
 
       res.status(200).json({

@@ -127,15 +127,25 @@ class MembershipService {
   }
 
   async updateMembership(membershipId, updateData) {
-    await this._getMembershipOrThrow(membershipId);
+    const membership = await this._getMembershipOrThrow(membershipId);
 
     const dbData = {};
     if (updateData.status !== undefined) dbData.status = updateData.status;
     if (updateData.autoRenew !== undefined)
       dbData.autoRenew = updateData.autoRenew;
     if (updateData.notes !== undefined) dbData.notes = updateData.notes;
+    if (updateData.startDate !== undefined)
+      dbData.startDate = new Date(updateData.startDate);
     if (updateData.endDate !== undefined)
       dbData.endDate = new Date(updateData.endDate);
+    if (updateData.discountAmount !== undefined) {
+      const { discountAmount, finalPrice } = calculatePricing(
+        membership.priceAtPurchase,
+        updateData.discountAmount,
+      );
+      dbData.discountAmount = discountAmount;
+      dbData.finalPrice = finalPrice;
+    }
 
     await membershipRepository.update(membershipId, dbData);
     return await membershipRepository.findByIdWithDetails(membershipId);
