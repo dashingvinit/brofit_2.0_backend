@@ -33,8 +33,8 @@ class TrainingService {
     if (!data.planVariantId) {
       throw new Error("Plan variant ID is required");
     }
-    if (!data.trainerName) {
-      throw new Error("Trainer name is required");
+    if (!data.trainerId) {
+      throw new Error("Trainer ID is required");
     }
 
     await validateMemberExists(data.memberId);
@@ -55,7 +55,7 @@ class TrainingService {
           orgId: data.orgId,
           memberId: data.memberId,
           planVariantId: data.planVariantId,
-          trainerName: data.trainerName,
+          trainerId: data.trainerId,
           startDate,
           endDate,
           status: "active",
@@ -68,6 +68,7 @@ class TrainingService {
         include: {
           member: true,
           planVariant: { include: { planType: true } },
+          trainer: true,
         },
       });
 
@@ -140,8 +141,8 @@ class TrainingService {
     if (updateData.notes !== undefined) dbData.notes = updateData.notes;
     if (updateData.endDate !== undefined)
       dbData.endDate = new Date(updateData.endDate);
-    if (updateData.trainerName !== undefined)
-      dbData.trainerName = updateData.trainerName;
+    if (updateData.trainerId !== undefined)
+      dbData.trainerId = updateData.trainerId;
 
     await trainingRepository.update(trainingId, dbData);
     return await trainingRepository.findByIdWithDetails(trainingId);

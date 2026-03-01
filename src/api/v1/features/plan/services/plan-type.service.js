@@ -1,4 +1,5 @@
 const planTypeRepository = require("../repositories/plan-type.repository");
+const { prisma } = require("../../../../../config/prisma.config");
 
 class PlanTypeService {
   async _getPlanTypeOrThrow(planTypeId, errorMessage = "Plan type not found") {
@@ -96,6 +97,18 @@ class PlanTypeService {
 
   async deletePlanType(planTypeId) {
     await this._getPlanTypeOrThrow(planTypeId);
+
+    const [membershipCount, trainingCount] = await Promise.all([
+      prisma.membership.count({ where: { planVariant: { planTypeId } } }),
+      prisma.training.count({ where: { planVariant: { planTypeId } } }),
+    ]);
+
+    if (membershipCount > 0 || trainingCount > 0) {
+      throw new Error(
+        "Cannot delete a plan type that has existing subscriptions. Deactivate it instead.",
+      );
+    }
+
     await planTypeRepository.destroy(planTypeId);
     return { message: "Plan type deleted successfully" };
   }

@@ -36,7 +36,7 @@ class TrainingController {
         orgId,
         memberId: req.body.memberId,
         planVariantId: req.body.planVariantId,
-        trainerName: req.body.trainerName,
+        trainerId: req.body.trainerId,
         startDate: req.body.startDate,
         discountAmount: req.body.discountAmount,
         autoRenew: req.body.autoRenew,
@@ -70,7 +70,7 @@ class TrainingController {
       const filters = {};
       if (req.query.status) filters.status = req.query.status;
       if (req.query.memberId) filters.memberId = req.query.memberId;
-      if (req.query.trainerName) filters.trainerName = req.query.trainerName;
+      if (req.query.trainerId) filters.trainerId = req.query.trainerId;
 
       const result = await trainingService.getAllTrainings(
         orgId,

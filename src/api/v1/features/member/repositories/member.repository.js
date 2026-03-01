@@ -17,37 +17,6 @@ class MemberRepository extends CrudRepository {
     });
   }
 
-  async findByOrganization(
-    organizationId,
-    options = {},
-    includeInactive = true,
-  ) {
-    const whereClause = {
-      orgId: organizationId,
-    };
-
-    // Only filter by isActive if includeInactive is false
-    if (!includeInactive) {
-      whereClause.isActive = true;
-    }
-
-    return await this.find(whereClause, {
-      orderBy: { createdAt: "desc" },
-      ...options,
-    });
-  }
-
-  async findByEmail(email) {
-    return await this.findOne({ email });
-  }
-
-  async findByPhone(phone, organizationId) {
-    return await this.findOne({
-      phone,
-      orgId: organizationId,
-    });
-  }
-
   async findActiveMembers(
     organizationId,
     page = 1,

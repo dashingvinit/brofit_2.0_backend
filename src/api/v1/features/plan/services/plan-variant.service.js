@@ -52,12 +52,6 @@ class PlanVariantService {
     return await planVariantRepository.findByPlanType(planTypeId, includeInactive);
   }
 
-  async getActiveVariantsByPlanType(planTypeId) {
-    // Verify plan type exists
-    await this._getPlanTypeOrThrow(planTypeId);
-    return await planVariantRepository.findActiveByPlanType(planTypeId);
-  }
-
   async updateVariant(variantId, updateData) {
     await this._getVariantOrThrow(variantId);
 
