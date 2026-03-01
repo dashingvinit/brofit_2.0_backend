@@ -21,15 +21,15 @@ class MemberRepository extends CrudRepository {
     organizationId,
     page = 1,
     limit = 10,
-    includeInactive = true,
+    isActive = null,
   ) {
     const whereClause = {
       orgId: organizationId,
     };
 
-    // Only filter by isActive if includeInactive is false
-    if (!includeInactive) {
-      whereClause.isActive = true;
+    // null → all members, true → active only, false → inactive only
+    if (isActive !== null) {
+      whereClause.isActive = isActive;
     }
 
     return await this.findWithPagination(whereClause, {

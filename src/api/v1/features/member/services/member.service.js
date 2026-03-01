@@ -66,13 +66,13 @@ class MemberService {
     organizationId,
     page = 1,
     limit = 10,
-    includeInactive = true,
+    isActive = null,
   ) {
     const result = await memberRepository.findActiveMembers(
       organizationId,
       page,
       limit,
-      includeInactive,
+      isActive,
     );
 
     return {

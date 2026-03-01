@@ -9,7 +9,16 @@ class TrainerRepository extends CrudRepository {
   async findByOrganization(orgId) {
     return await this.find(
       { orgId, isActive: true },
-      { orderBy: { name: "asc" } },
+      {
+        orderBy: { name: "asc" },
+        include: {
+          _count: {
+            select: {
+              trainings: { where: { status: "active" } },
+            },
+          },
+        },
+      },
     );
   }
 }
