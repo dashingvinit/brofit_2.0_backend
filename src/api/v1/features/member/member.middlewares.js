@@ -10,13 +10,4 @@ const requireAuth = () => {
   };
 };
 
-const checkRole = () => {
-  return (_req, _res, next) => {
-    next();
-  };
-};
-
-module.exports = {
-  requireAuth,
-  checkRole,
-};
+module.exports = { requireAuth };

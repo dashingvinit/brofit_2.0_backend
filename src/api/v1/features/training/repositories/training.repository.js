@@ -11,7 +11,7 @@ class TrainingRepository extends CrudRepository {
       { memberId },
       {
         orderBy: { createdAt: "desc" },
-        include: { planVariant: { include: { planType: true } }, payments: true },
+        include: { planVariant: { include: { planType: true } }, trainer: true, payments: true },
         ...options,
       },
     );
@@ -22,7 +22,7 @@ class TrainingRepository extends CrudRepository {
 
     if (filters.status) where.status = filters.status;
     if (filters.memberId) where.memberId = filters.memberId;
-    if (filters.trainerName) where.trainerName = filters.trainerName;
+    if (filters.trainerId) where.trainerId = filters.trainerId;
 
     return await this.findWithPagination(where, {
       page,
@@ -31,6 +31,7 @@ class TrainingRepository extends CrudRepository {
       include: {
         member: true,
         planVariant: { include: { planType: true } },
+        trainer: true,
         payments: true,
       },
     });
@@ -42,6 +43,7 @@ class TrainingRepository extends CrudRepository {
       include: {
         member: true,
         planVariant: { include: { planType: true } },
+        trainer: true,
         payments: { orderBy: { createdAt: "desc" } },
       },
     });
@@ -57,6 +59,7 @@ class TrainingRepository extends CrudRepository {
       {
         include: {
           planVariant: { include: { planType: true } },
+          trainer: true,
           payments: true,
         },
       },
@@ -76,7 +79,7 @@ class TrainingRepository extends CrudRepository {
       },
       {
         orderBy: { endDate: "asc" },
-        include: { member: true, planVariant: { include: { planType: true } } },
+        include: { member: true, planVariant: { include: { planType: true } }, trainer: true },
       },
     );
   }

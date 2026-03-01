@@ -62,25 +62,6 @@ class MemberService {
     return await this._getMemberOrThrow(memberId);
   }
 
-  async getMemberByClerkId(clerkUserId) {
-    const member = await memberRepository.findByClerkId(clerkUserId);
-    if (!member) {
-      throw new Error("Member not found");
-    }
-    return member;
-  }
-
-  async getMemberByClerkIdAndOrg(clerkUserId, organizationId) {
-    const member = await memberRepository.findByClerkIdAndOrg(
-      clerkUserId,
-      organizationId,
-    );
-    if (!member) {
-      throw new Error("Member not found in this organization");
-    }
-    return member;
-  }
-
   async getAllMembers(
     organizationId,
     page = 1,
@@ -136,44 +117,6 @@ class MemberService {
     await this._getMemberOrThrow(memberId);
     await memberRepository.destroy(memberId);
     return { message: "Member deleted successfully" };
-  }
-
-  async syncMemberFromClerk(clerkUserData, organizationId) {
-    if (!organizationId) {
-      throw new Error("Organization ID is required for member sync");
-    }
-
-    const existingMember = await memberRepository.findByClerkIdAndOrg(
-      clerkUserData.id,
-      organizationId,
-    );
-
-    if (existingMember) {
-      return await memberRepository.update(existingMember.id, {
-        email:
-          clerkUserData.email_addresses?.[0]?.email_address ||
-          existingMember.email,
-        firstName: clerkUserData.first_name || existingMember.firstName,
-        lastName: clerkUserData.last_name || existingMember.lastName,
-        phone:
-          clerkUserData.phone_numbers?.[0]?.phone_number ||
-          existingMember.phone,
-      });
-    }
-
-    return await memberRepository.create({
-      clerkUserId: clerkUserData.id,
-      orgId: organizationId,
-      email: clerkUserData.email_addresses?.[0]?.email_address || "",
-      firstName: clerkUserData.first_name || "",
-      lastName: clerkUserData.last_name || "",
-      phone: clerkUserData.phone_numbers?.[0]?.phone_number || "",
-      dateOfBirth: new Date(),
-      gender: "Not specified",
-      joinDate: new Date(),
-      notes: null,
-      isActive: true,
-    });
   }
 
   async searchMembers(

@@ -159,7 +159,7 @@ class ReportsRepository {
           membershipDues.push({
             id: ms.id,
             planName: ms.planVariant?.planType?.name || "Unknown",
-            variantName: ms.planVariant?.name || "Unknown",
+            variantName: ms.planVariant?.durationLabel || "Unknown",
             finalPrice: ms.finalPrice,
             totalPaid: paid,
             dueAmount: due,
@@ -178,7 +178,7 @@ class ReportsRepository {
           trainingDues.push({
             id: tr.id,
             planName: tr.planVariant?.planType?.name || "Unknown",
-            variantName: tr.planVariant?.name || "Unknown",
+            variantName: tr.planVariant?.durationLabel || "Unknown",
             finalPrice: tr.finalPrice,
             totalPaid: paid,
             dueAmount: due,

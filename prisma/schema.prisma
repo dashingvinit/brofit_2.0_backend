@@ -16,6 +16,7 @@ model Organization {
 
   members   Member[]
   planTypes PlanType[]
+  trainers  Trainer[]
 
   @@map("organizations")
 }
@@ -149,7 +150,7 @@ model Training {
   orgId           String         @map("org_id")
   memberId        String         @map("member_id")
   planVariantId   String         @map("plan_variant_id")
-  trainerName     String         @map("trainer_name")
+  trainerId       String         @map("trainer_id")
   startDate       DateTime       @map("start_date")
   endDate         DateTime       @map("end_date")
   status          TrainingStatus @default(active)
@@ -163,12 +164,30 @@ model Training {
 
   member      Member      @relation(fields: [memberId], references: [id])
   planVariant PlanVariant @relation(fields: [planVariantId], references: [id])
+  trainer     Trainer     @relation(fields: [trainerId], references: [id])
   payments    Payment[]
 
   @@index([memberId])
   @@index([status])
   @@index([endDate])
+  @@index([trainerId])
   @@map("trainings")
+}
+
+model Trainer {
+  id        String     @id @default(uuid())
+  orgId     String     @map("org_id")
+  name      String
+  isActive  Boolean    @default(true) @map("is_active")
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [orgId], references: [id])
+  trainings    Training[]
+
+  @@index([orgId])
+  @@index([isActive])
+  @@map("trainers")
 }
 
 model Payment {

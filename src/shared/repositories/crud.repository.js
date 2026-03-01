@@ -70,7 +70,7 @@ class CrudRepository {
     try {
       const record = await this.model.update({
         where: { id },
-        data: { is_active: false },
+        data: { isActive: false },
       });
 
       return record;
