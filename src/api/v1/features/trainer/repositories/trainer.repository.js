@@ -21,6 +21,34 @@ class TrainerRepository extends CrudRepository {
       },
     );
   }
+
+  async findWithActiveClients(trainerId) {
+    return await this.get(trainerId, {
+      include: {
+        trainings: {
+          where: { status: "active" },
+          include: {
+            member: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                phone: true,
+                email: true,
+                isActive: true,
+              },
+            },
+            planVariant: {
+              include: {
+                planType: { select: { name: true } },
+              },
+            },
+          },
+          orderBy: { endDate: "asc" },
+        },
+      },
+    });
+  }
 }
 
 module.exports = new TrainerRepository();

@@ -10,6 +10,7 @@ const router = express.Router();
 
 router.get("/", trainerController.getAllTrainers);
 router.post("/", trainerController.createTrainer);
+router.get("/:id/clients", trainerController.getTrainerClients);
 router.get("/:id", trainerController.getTrainerById);
 router.patch("/:id", trainerController.updateTrainer);
 router.put("/:id/deactivate", trainerController.deactivateTrainer);

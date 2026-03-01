@@ -8,6 +8,7 @@ class TrainerController {
     this.getTrainerById = this.getTrainerById.bind(this);
     this.updateTrainer = this.updateTrainer.bind(this);
     this.deactivateTrainer = this.deactivateTrainer.bind(this);
+    this.getTrainerClients = this.getTrainerClients.bind(this);
   }
 
   async createTrainer(req, res, next) {
@@ -83,6 +84,20 @@ class TrainerController {
       res.status(200).json({
         success: true,
         message: "Trainer deactivated successfully",
+        data: trainer,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getTrainerClients(req, res, next) {
+    try {
+      const { id } = req.params;
+      const trainer = await trainerService.getTrainerWithActiveClients(id);
+
+      res.status(200).json({
+        success: true,
         data: trainer,
       });
     } catch (error) {
