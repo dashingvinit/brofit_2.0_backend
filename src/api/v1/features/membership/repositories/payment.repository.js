@@ -1,5 +1,6 @@
 const CrudRepository = require("../../../../../shared/repositories/crud.repository");
 const { prisma } = require("../../../../../config/prisma.config");
+const { getStartOfCurrentMonth } = require("../../../../../shared/helpers/subscription.helper");
 
 class PaymentRepository extends CrudRepository {
   constructor() {
@@ -61,11 +62,7 @@ class PaymentRepository extends CrudRepository {
   }
 
   async getPaymentStats(orgId) {
-    // Calculate start of current month in UTC
-    const now = new Date();
-    const year = now.getUTCFullYear();
-    const month = now.getUTCMonth();
-    const startOfMonth = new Date(Date.UTC(year, month, 1, 0, 0, 0, 0));
+    const startOfMonth = getStartOfCurrentMonth();
 
     const [totalCollected, collectedThisMonth] = await Promise.all([
       prisma.payment.aggregate({

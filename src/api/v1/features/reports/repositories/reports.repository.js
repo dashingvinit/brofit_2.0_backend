@@ -2,6 +2,77 @@ const { prisma } = require("../../../../../config/prisma.config");
 
 class ReportsRepository {
   /**
+   * Get all organization IDs (used by the cron job to iterate orgs).
+   */
+  async getAllOrgIds() {
+    const orgs = await prisma.organization.findMany({ select: { id: true } });
+    return orgs.map((o) => o.id);
+  }
+
+  /**
+   * Count total, active, and inactive members for an org.
+   * Active = isActive=true AND has at least one active membership or training.
+   * Inactive = isActive=true AND no active membership or training.
+   */
+  async getMemberCounts(orgId) {
+    const [total, active, inactive] = await Promise.all([
+      prisma.member.count({ where: { orgId } }),
+      prisma.member.count({
+        where: {
+          orgId,
+          isActive: true,
+          OR: [
+            { memberships: { some: { status: "active" } } },
+            { trainings: { some: { status: "active" } } },
+          ],
+        },
+      }),
+      prisma.member.count({
+        where: {
+          orgId,
+          isActive: true,
+          memberships: { none: { status: "active" } },
+          trainings: { none: { status: "active" } },
+        },
+      }),
+    ]);
+    return { total, active, inactive };
+  }
+
+  /**
+   * Upsert a daily activity snapshot for the given org and date.
+   */
+  async upsertDailySnapshot({ orgId, snapshotDate, totalMembers, activeMembers, inactiveMembers, newlyExpired }) {
+    return prisma.dailyActivitySnapshot.upsert({
+      where: { orgId_snapshotDate: { orgId, snapshotDate } },
+      create: { orgId, snapshotDate, totalMembers, activeMembers, inactiveMembers, newlyExpired },
+      update: { totalMembers, activeMembers, inactiveMembers, newlyExpired },
+    });
+  }
+
+  /**
+   * Get daily activity snapshots for an org over the last N days.
+   */
+  async getActivityTrend(orgId, days = 30) {
+    const since = new Date();
+    since.setDate(since.getDate() - days);
+    since.setHours(0, 0, 0, 0);
+
+    return prisma.dailyActivitySnapshot.findMany({
+      where: { orgId, snapshotDate: { gte: since } },
+      orderBy: { snapshotDate: "asc" },
+      select: {
+        snapshotDate: true,
+        totalMembers: true,
+        activeMembers: true,
+        inactiveMembers: true,
+        newlyExpired: true,
+      },
+    });
+  }
+
+
+  /**
    * Bulk-expire memberships where endDate has passed and status is still "active".
    * Returns the count of updated records.
    */

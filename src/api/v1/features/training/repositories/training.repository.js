@@ -1,5 +1,6 @@
 const CrudRepository = require("../../../../../shared/repositories/crud.repository");
 const { prisma } = require("../../../../../config/prisma.config");
+const { getStartOfCurrentMonth } = require("../../../../../shared/helpers/subscription.helper");
 
 class TrainingRepository extends CrudRepository {
   constructor() {
@@ -85,10 +86,7 @@ class TrainingRepository extends CrudRepository {
   }
 
   async getTrainingStats(orgId) {
-    const now = new Date();
-    const year = now.getUTCFullYear();
-    const month = now.getUTCMonth();
-    const startOfMonth = new Date(Date.UTC(year, month, 1, 0, 0, 0, 0));
+    const startOfMonth = getStartOfCurrentMonth();
 
     const [total, active, expired, cancelled, newThisMonth] =
       await Promise.all([

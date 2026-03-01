@@ -5,6 +5,7 @@ const membershipRoutes = require("./features/membership/membership.routes");
 const trainingRoutes = require("./features/training/training.routes");
 const trainerRoutes = require("./features/trainer/trainer.routes");
 const reportRoutes = require("./features/reports/reports.routes");
+const financialsRoutes = require("./features/financials/financials.routes");
 
 const router = express.Router();
 
@@ -24,5 +25,6 @@ router.use("/memberships", membershipRoutes);
 router.use("/trainings", trainingRoutes);
 router.use("/trainers", trainerRoutes);
 router.use("/reports", reportRoutes);
+router.use("/financials", financialsRoutes);
 
 module.exports = router;

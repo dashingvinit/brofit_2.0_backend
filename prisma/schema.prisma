@@ -14,9 +14,12 @@ model Organization {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  members   Member[]
-  planTypes PlanType[]
-  trainers  Trainer[]
+  members        Member[]
+  planTypes      PlanType[]
+  trainers       Trainer[]
+  dailySnapshots DailyActivitySnapshot[]
+  expenses       Expense[]
+  investments    Investment[]
 
   @@map("organizations")
 }
@@ -212,4 +215,68 @@ model Payment {
   @@index([membershipId])
   @@index([trainingId])
   @@map("payments")
+}
+
+// ─── Cron: Daily activity snapshots ───────────────────────────────────────────
+
+model DailyActivitySnapshot {
+  id              String   @id @default(uuid())
+  orgId           String   @map("org_id")
+  snapshotDate    DateTime @db.Date @map("snapshot_date")
+  totalMembers    Int      @map("total_members")
+  activeMembers   Int      @map("active_members")
+  inactiveMembers Int      @map("inactive_members")
+  newlyExpired    Int      @map("newly_expired")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  org             Organization @relation(fields: [orgId], references: [id])
+
+  @@unique([orgId, snapshotDate])
+  @@index([orgId])
+  @@map("daily_activity_snapshots")
+}
+
+// ─── Financials ───────────────────────────────────────────────────────────────
+
+enum ExpenseCategory {
+  rent
+  utilities
+  staff
+  equipment
+  marketing
+  maintenance
+  other
+}
+
+model Expense {
+  id          String          @id @default(uuid())
+  orgId       String          @map("org_id")
+  amount      Float
+  category    ExpenseCategory @default(other)
+  description String?
+  date        DateTime        @db.Date
+  createdAt   DateTime        @default(now()) @map("created_at")
+  updatedAt   DateTime        @updatedAt @map("updated_at")
+
+  org         Organization @relation(fields: [orgId], references: [id])
+
+  @@index([orgId])
+  @@index([date])
+  @@map("expenses")
+}
+
+model Investment {
+  id        String   @id @default(uuid())
+  orgId     String   @map("org_id")
+  name      String
+  amount    Float
+  date      DateTime @db.Date
+  notes     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  org       Organization @relation(fields: [orgId], references: [id])
+
+  @@index([orgId])
+  @@map("investments")
 }

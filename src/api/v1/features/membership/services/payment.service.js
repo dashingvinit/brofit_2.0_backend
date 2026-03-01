@@ -33,16 +33,17 @@ class PaymentService {
       validatePaymentAmount(data.amount, membership.finalPrice, paidAmount, "Membership");
     }
 
+    const resolvedStatus = data.status || "paid";
     const payment = await paymentRepository.create({
       orgId: data.orgId,
       memberId: data.memberId,
       membershipId: data.membershipId || null,
       amount: data.amount,
       method: data.method || "cash",
-      status: data.status || "paid",
+      status: resolvedStatus,
       reference: data.reference || null,
       notes: data.notes || null,
-      paidAt: data.status === "paid" ? new Date() : null,
+      paidAt: resolvedStatus === "paid" ? new Date() : null,
     });
 
     return payment;
