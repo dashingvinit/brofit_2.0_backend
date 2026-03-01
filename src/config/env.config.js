@@ -21,7 +21,6 @@ const requiredVars = [
   'NODE_ENV',
   'PORT',
   'CLERK_SECRET_KEY',
-  'MONGODB_URI'
 ];
 
 // Validate required variables in production
@@ -45,11 +44,6 @@ const config = {
   clerk: {
     publishableKey: process.env.CLERK_PUBLISHABLE_KEY,
     secretKey: process.env.CLERK_SECRET_KEY,
-  },
-
-  // MongoDB database configuration
-  database: {
-    uri: process.env.MONGODB_URI || 'mongodb://localhost:27017/brofit_gym',
   },
 
   // CORS configuration

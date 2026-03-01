@@ -6,6 +6,7 @@ class ReportsController {
     this.expireSubscriptions = this.expireSubscriptions.bind(this);
     this.getInactiveCandidates = this.getInactiveCandidates.bind(this);
     this.getDuesReport = this.getDuesReport.bind(this);
+    this.getActivityTrend = this.getActivityTrend.bind(this);
   }
 
   async expireSubscriptions(req, res, next) {
@@ -72,6 +73,20 @@ class ReportsController {
         summary: result.summary,
         pagination: result.pagination,
       });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async getActivityTrend(req, res, next) {
+    try {
+      const orgId = requireOrgId(req, res);
+      if (!orgId) return;
+
+      const days = Math.min(parseInt(req.query.days) || 30, 365);
+      const data = await reportsService.getActivityTrend(orgId, days);
+
+      res.status(200).json({ success: true, data, days });
     } catch (error) {
       next(error);
     }

@@ -33,16 +33,17 @@ class TrainingPaymentService {
       validatePaymentAmount(data.amount, training.finalPrice, paidAmount, "Training");
     }
 
+    const resolvedStatus = data.status || "paid";
     const payment = await trainingPaymentRepository.create({
       orgId: data.orgId,
       memberId: data.memberId,
       trainingId: data.trainingId || null,
       amount: data.amount,
       method: data.method || "cash",
-      status: data.status || "paid",
+      status: resolvedStatus,
       reference: data.reference || null,
       notes: data.notes || null,
-      paidAt: data.status === "paid" ? new Date() : null,
+      paidAt: resolvedStatus === "paid" ? new Date() : null,
     });
 
     return payment;

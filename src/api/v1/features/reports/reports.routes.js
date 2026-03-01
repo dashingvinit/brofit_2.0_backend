@@ -15,4 +15,8 @@ router.get("/inactive-candidates", reportsController.getInactiveCandidates);
 // All members with outstanding dues, with summary totals
 router.get("/dues", reportsController.getDuesReport);
 
+// GET /api/v1/reports/activity-trend?days=30
+// Daily member activity snapshots for charting (populated by cron)
+router.get("/activity-trend", reportsController.getActivityTrend);
+
 module.exports = router;

@@ -120,6 +120,14 @@ function validatePaymentAmount(amount, finalPrice, paidAmount, entityName) {
   }
 }
 
+/**
+ * Returns the start of the current month in UTC.
+ */
+function getStartOfCurrentMonth() {
+  const now = new Date();
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0));
+}
+
 module.exports = {
   validateMemberExists,
   validatePlanVariant,
@@ -128,4 +136,5 @@ module.exports = {
   validateStatusTransition,
   calculateDues,
   validatePaymentAmount,
+  getStartOfCurrentMonth,
 };

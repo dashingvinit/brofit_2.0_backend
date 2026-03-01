@@ -83,6 +83,32 @@ class ReportsService {
       filters,
     );
   }
+
+  /**
+   * Record a daily activity snapshot for an org.
+   * Called by the cron job after expireSubscriptions().
+   */
+  async takeActivitySnapshot(orgId, { expiredMemberships = 0, expiredTrainings = 0 } = {}) {
+    const counts = await reportsRepository.getMemberCounts(orgId);
+    const snapshotDate = new Date();
+    snapshotDate.setHours(0, 0, 0, 0);
+
+    return reportsRepository.upsertDailySnapshot({
+      orgId,
+      snapshotDate,
+      totalMembers: counts.total,
+      activeMembers: counts.active,
+      inactiveMembers: counts.inactive,
+      newlyExpired: expiredMemberships + expiredTrainings,
+    });
+  }
+
+  /**
+   * Get daily activity trend for the last N days.
+   */
+  async getActivityTrend(orgId, days = 30) {
+    return reportsRepository.getActivityTrend(orgId, days);
+  }
 }
 
 module.exports = new ReportsService();
