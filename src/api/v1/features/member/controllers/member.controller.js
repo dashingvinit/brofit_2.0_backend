@@ -53,13 +53,19 @@ class MemberController {
 
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 10;
-      const includeInactive = req.query.includeInactive !== "false";
+      // isActive: "true" → active only, "false" → inactive only, omitted → all
+      const isActive =
+        req.query.isActive === "true"
+          ? true
+          : req.query.isActive === "false"
+            ? false
+            : null;
 
       const result = await memberService.getAllMembers(
         organizationId,
         page,
         limit,
-        includeInactive,
+        isActive,
       );
 
       res.status(200).json({
