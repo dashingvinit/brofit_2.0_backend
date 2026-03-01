@@ -47,6 +47,14 @@ class TrainerService {
     await trainerRepository.update(trainerId, { isActive: false });
     return await trainerRepository.get(trainerId);
   }
+
+  async getTrainerWithActiveClients(trainerId) {
+    const trainer = await trainerRepository.findWithActiveClients(trainerId);
+    if (!trainer) {
+      throw new Error("Trainer not found");
+    }
+    return trainer;
+  }
 }
 
 module.exports = new TrainerService();
