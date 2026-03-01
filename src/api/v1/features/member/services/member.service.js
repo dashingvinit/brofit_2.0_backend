@@ -1,4 +1,5 @@
 const memberRepository = require("../repositories/member.repository");
+const { prisma } = require("../../../../../config/prisma.config");
 
 class MemberService {
   async _getMemberOrThrow(memberId, errorMessage = "Member not found") {
@@ -12,6 +13,20 @@ class MemberService {
   async createMember(memberData) {
     if (!memberData.orgId) {
       throw new Error("Organization ID is required");
+    }
+
+    // Auto-create org record from Clerk data if it doesn't exist yet
+    const existingOrg = await prisma.organization.findUnique({
+      where: { id: memberData.orgId },
+    });
+    if (!existingOrg) {
+      await prisma.organization.create({
+        data: {
+          id: memberData.orgId,
+          name: memberData.orgSlug || `Organization ${memberData.orgId}`,
+          ownerUserId: memberData.ownerUserId,
+        },
+      });
     }
 
     if (memberData.clerkUserId) {

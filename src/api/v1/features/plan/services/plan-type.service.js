@@ -29,6 +29,7 @@ class PlanTypeService {
       orgId: planTypeData.orgId,
       name: planTypeData.name,
       description: planTypeData.description || null,
+      category: planTypeData.category,
       isActive: planTypeData.isActive ?? true,
     });
   }
