@@ -1,33 +1,11 @@
 const membershipService = require("../services/membership.service");
-const paymentService = require("../services/payment.service");
+const paymentService = require("../../../../../shared/services/payment.service");
 const { requireOrgId } = require("../../../../../shared/helpers/auth.helper");
 
 class MembershipController {
-  constructor() {
-    this.createMembership = this.createMembership.bind(this);
-    this.getAllMemberships = this.getAllMemberships.bind(this);
-    this.getMembershipById = this.getMembershipById.bind(this);
-    this.getMemberMemberships = this.getMemberMemberships.bind(this);
-    this.getActiveMembership = this.getActiveMembership.bind(this);
-    this.getMembershipDues = this.getMembershipDues.bind(this);
-    this.updateMembership = this.updateMembership.bind(this);
-    this.cancelMembership = this.cancelMembership.bind(this);
-    this.freezeMembership = this.freezeMembership.bind(this);
-    this.unfreezeMembership = this.unfreezeMembership.bind(this);
-    this.getExpiringMemberships = this.getExpiringMemberships.bind(this);
-    this.getMembershipStats = this.getMembershipStats.bind(this);
-
-    this.recordPayment = this.recordPayment.bind(this);
-    this.getPaymentById = this.getPaymentById.bind(this);
-    this.getPaymentsByMembership = this.getPaymentsByMembership.bind(this);
-    this.getPaymentsByMember = this.getPaymentsByMember.bind(this);
-    this.getAllPayments = this.getAllPayments.bind(this);
-    this.updatePaymentStatus = this.updatePaymentStatus.bind(this);
-  }
-
   // ─── Membership Endpoints ───────────────────────────────────
 
-  async createMembership(req, res, next) {
+  createMembership = async (req, res, next) => {
     try {
       const orgId = requireOrgId(req, res);
       if (!orgId) return;
@@ -56,9 +34,9 @@ class MembershipController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async getAllMemberships(req, res, next) {
+  getAllMemberships = async (req, res, next) => {
     try {
       const orgId = requireOrgId(req, res);
       if (!orgId) return;
@@ -84,9 +62,9 @@ class MembershipController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async getMembershipById(req, res, next) {
+  getMembershipById = async (req, res, next) => {
     try {
       const { id } = req.params;
       const membership = await membershipService.getMembershipById(id);
@@ -98,9 +76,9 @@ class MembershipController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async getMemberMemberships(req, res, next) {
+  getMemberMemberships = async (req, res, next) => {
     try {
       const { memberId } = req.params;
       const memberships =
@@ -113,9 +91,9 @@ class MembershipController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async getActiveMembership(req, res, next) {
+  getActiveMembership = async (req, res, next) => {
     try {
       const orgId = requireOrgId(req, res);
       if (!orgId) return;
@@ -133,9 +111,9 @@ class MembershipController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async getMembershipDues(req, res, next) {
+  getMembershipDues = async (req, res, next) => {
     try {
       const { id } = req.params;
       const dues = await membershipService.getMembershipDues(id);
@@ -147,9 +125,9 @@ class MembershipController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async updateMembership(req, res, next) {
+  updateMembership = async (req, res, next) => {
     try {
       const { id } = req.params;
       const membership = await membershipService.updateMembership(
@@ -165,9 +143,9 @@ class MembershipController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async cancelMembership(req, res, next) {
+  cancelMembership = async (req, res, next) => {
     try {
       const { id } = req.params;
       const membership = await membershipService.cancelMembership(id);
@@ -180,9 +158,9 @@ class MembershipController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async freezeMembership(req, res, next) {
+  freezeMembership = async (req, res, next) => {
     try {
       const { id } = req.params;
       const membership = await membershipService.freezeMembership(id);
@@ -195,9 +173,9 @@ class MembershipController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async unfreezeMembership(req, res, next) {
+  unfreezeMembership = async (req, res, next) => {
     try {
       const { id } = req.params;
       const membership = await membershipService.unfreezeMembership(id);
@@ -210,9 +188,9 @@ class MembershipController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async getExpiringMemberships(req, res, next) {
+  getExpiringMemberships = async (req, res, next) => {
     try {
       const orgId = requireOrgId(req, res);
       if (!orgId) return;
@@ -230,9 +208,9 @@ class MembershipController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async getMembershipStats(req, res, next) {
+  getMembershipStats = async (req, res, next) => {
     try {
       const orgId = requireOrgId(req, res);
       if (!orgId) return;
@@ -246,11 +224,11 @@ class MembershipController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
   // ─── Payment Endpoints ──────────────────────────────────────
 
-  async recordPayment(req, res, next) {
+  recordPayment = async (req, res, next) => {
     try {
       const orgId = requireOrgId(req, res);
       if (!orgId) return;
@@ -276,9 +254,9 @@ class MembershipController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async getPaymentById(req, res, next) {
+  getPaymentById = async (req, res, next) => {
     try {
       const { id } = req.params;
       const payment = await paymentService.getPaymentById(id);
@@ -290,13 +268,13 @@ class MembershipController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async getPaymentsByMembership(req, res, next) {
+  getPaymentsByMembership = async (req, res, next) => {
     try {
       const { id } = req.params;
       const payments =
-        await paymentService.getPaymentsByMembership(id);
+        await paymentService.getPaymentsBySubscription(id, "membershipId");
 
       res.status(200).json({
         success: true,
@@ -305,9 +283,9 @@ class MembershipController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async getPaymentsByMember(req, res, next) {
+  getPaymentsByMember = async (req, res, next) => {
     try {
       const { memberId } = req.params;
       const page = parseInt(req.query.page) || 1;
@@ -327,9 +305,9 @@ class MembershipController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async getAllPayments(req, res, next) {
+  getAllPayments = async (req, res, next) => {
     try {
       const orgId = requireOrgId(req, res);
       if (!orgId) return;
@@ -357,9 +335,9 @@ class MembershipController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async updatePaymentStatus(req, res, next) {
+  updatePaymentStatus = async (req, res, next) => {
     try {
       const { id } = req.params;
       const { status } = req.body;
@@ -380,7 +358,7 @@ class MembershipController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 }
 
 module.exports = new MembershipController();

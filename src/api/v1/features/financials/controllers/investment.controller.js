@@ -2,14 +2,7 @@ const { requireOrgId } = require("../../../../../shared/helpers/auth.helper");
 const investmentService = require("../services/investment.service");
 
 class InvestmentController {
-  constructor() {
-    this.getInvestments = this.getInvestments.bind(this);
-    this.createInvestment = this.createInvestment.bind(this);
-    this.updateInvestment = this.updateInvestment.bind(this);
-    this.deleteInvestment = this.deleteInvestment.bind(this);
-  }
-
-  async getInvestments(req, res, next) {
+  getInvestments = async (req, res, next) => {
     try {
       const orgId = requireOrgId(req, res);
       if (!orgId) return;
@@ -19,9 +12,9 @@ class InvestmentController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async createInvestment(req, res, next) {
+  createInvestment = async (req, res, next) => {
     try {
       const orgId = requireOrgId(req, res);
       if (!orgId) return;
@@ -36,9 +29,9 @@ class InvestmentController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async updateInvestment(req, res, next) {
+  updateInvestment = async (req, res, next) => {
     try {
       const orgId = requireOrgId(req, res);
       if (!orgId) return;
@@ -49,9 +42,9 @@ class InvestmentController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async deleteInvestment(req, res, next) {
+  deleteInvestment = async (req, res, next) => {
     try {
       const orgId = requireOrgId(req, res);
       if (!orgId) return;
@@ -62,7 +55,7 @@ class InvestmentController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 }
 
 module.exports = new InvestmentController();

@@ -3,25 +3,6 @@ const planVariantService = require("../services/plan-variant.service");
 const { requireOrgId } = require("../../../../../shared/helpers/auth.helper");
 
 class PlanController {
-  constructor() {
-    // Plan Type methods
-    this.createPlanType = this.createPlanType.bind(this);
-    this.getAllPlanTypes = this.getAllPlanTypes.bind(this);
-    this.getActivePlanTypes = this.getActivePlanTypes.bind(this);
-    this.getPlanTypeById = this.getPlanTypeById.bind(this);
-    this.updatePlanType = this.updatePlanType.bind(this);
-    this.deletePlanType = this.deletePlanType.bind(this);
-    this.deactivatePlanType = this.deactivatePlanType.bind(this);
-
-    // Plan Variant methods
-    this.createVariant = this.createVariant.bind(this);
-    this.getVariantsByPlanType = this.getVariantsByPlanType.bind(this);
-    this.getVariantById = this.getVariantById.bind(this);
-    this.updateVariant = this.updateVariant.bind(this);
-    this.deleteVariant = this.deleteVariant.bind(this);
-    this.deactivateVariant = this.deactivateVariant.bind(this);
-  }
-
   // ============================================
   // PLAN TYPE ENDPOINTS
   // ============================================
@@ -30,7 +11,7 @@ class PlanController {
    * Create a new plan type
    * POST /api/v1/plans/types
    */
-  async createPlanType(req, res, next) {
+  createPlanType = async (req, res, next) => {
     try {
       const orgId = requireOrgId(req, res);
       if (!orgId) return;
@@ -66,13 +47,13 @@ class PlanController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
   /**
    * Get all plan types including inactive (admin only)
    * GET /api/v1/plans/types/all
    */
-  async getAllPlanTypes(req, res, next) {
+  getAllPlanTypes = async (req, res, next) => {
     try {
       const orgId = requireOrgId(req, res);
       if (!orgId) return;
@@ -90,13 +71,13 @@ class PlanController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
   /**
    * Get active plan types
    * GET /api/v1/plans/types
    */
-  async getActivePlanTypes(req, res, next) {
+  getActivePlanTypes = async (req, res, next) => {
     try {
       const orgId = requireOrgId(req, res);
       if (!orgId) return;
@@ -114,13 +95,13 @@ class PlanController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
   /**
    * Get plan type by ID
    * GET /api/v1/plans/types/:id
    */
-  async getPlanTypeById(req, res, next) {
+  getPlanTypeById = async (req, res, next) => {
     try {
       const { id } = req.params;
       const planType = await planTypeService.getPlanTypeById(id);
@@ -132,13 +113,13 @@ class PlanController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
   /**
    * Update plan type
    * PATCH /api/v1/plans/types/:id
    */
-  async updatePlanType(req, res, next) {
+  updatePlanType = async (req, res, next) => {
     try {
       const { id } = req.params;
       const updateData = {};
@@ -161,13 +142,13 @@ class PlanController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
   /**
    * Delete plan type
    * DELETE /api/v1/plans/types/:id
    */
-  async deletePlanType(req, res, next) {
+  deletePlanType = async (req, res, next) => {
     try {
       const { id } = req.params;
       await planTypeService.deletePlanType(id);
@@ -179,13 +160,13 @@ class PlanController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
   /**
    * Deactivate plan type
    * PUT /api/v1/plans/types/:id/deactivate
    */
-  async deactivatePlanType(req, res, next) {
+  deactivatePlanType = async (req, res, next) => {
     try {
       const { id } = req.params;
       const planType = await planTypeService.deactivatePlanType(id);
@@ -198,7 +179,7 @@ class PlanController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
   // ============================================
   // PLAN VARIANT ENDPOINTS
@@ -208,7 +189,7 @@ class PlanController {
    * Create a new variant for a plan type
    * POST /api/v1/plans/types/:planTypeId/variants
    */
-  async createVariant(req, res, next) {
+  createVariant = async (req, res, next) => {
     try {
       const { planTypeId } = req.params;
 
@@ -230,13 +211,13 @@ class PlanController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
   /**
    * Get all variants for a plan type
    * GET /api/v1/plans/types/:planTypeId/variants
    */
-  async getVariantsByPlanType(req, res, next) {
+  getVariantsByPlanType = async (req, res, next) => {
     try {
       const { planTypeId } = req.params;
       const includeInactive = req.query.includeInactive !== "false";
@@ -253,13 +234,13 @@ class PlanController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
   /**
    * Get variant by ID
    * GET /api/v1/plans/variants/:id
    */
-  async getVariantById(req, res, next) {
+  getVariantById = async (req, res, next) => {
     try {
       const { id } = req.params;
       const variant = await planVariantService.getVariantById(id);
@@ -271,13 +252,13 @@ class PlanController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
   /**
    * Update variant
    * PATCH /api/v1/plans/variants/:id
    */
-  async updateVariant(req, res, next) {
+  updateVariant = async (req, res, next) => {
     try {
       const { id } = req.params;
       const updateData = {};
@@ -300,13 +281,13 @@ class PlanController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
   /**
    * Delete variant
    * DELETE /api/v1/plans/variants/:id
    */
-  async deleteVariant(req, res, next) {
+  deleteVariant = async (req, res, next) => {
     try {
       const { id } = req.params;
       await planVariantService.deleteVariant(id);
@@ -318,13 +299,13 @@ class PlanController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
   /**
    * Deactivate variant
    * PUT /api/v1/plans/variants/:id/deactivate
    */
-  async deactivateVariant(req, res, next) {
+  deactivateVariant = async (req, res, next) => {
     try {
       const { id } = req.params;
       const variant = await planVariantService.deactivateVariant(id);
@@ -337,7 +318,156 @@ class PlanController {
     } catch (error) {
       next(error);
     }
-  }
+  };
+
+  /**
+   * Bulk import plan types + variants from CSV rows.
+   * POST /api/v1/plans/import
+   * Body: { rows: Array<Record<string, string>> }
+   *
+   * Expected CSV columns:
+   *   Plan Name, Category (membership|training), Description,
+   *   Duration Label, Duration Days, Price, Plan Active, Variant Active
+   *
+   * Rows sharing the same Plan Name are grouped: the first occurrence creates
+   * the plan type (if it doesn't already exist) and every row adds a variant.
+   */
+  importPlans = async (req, res, next) => {
+    const { requireOrgId } = require("../../../../../shared/helpers/auth.helper");
+    try {
+      const orgId = requireOrgId(req, res);
+      if (!orgId) return;
+
+      const rows = req.body.rows;
+      if (!Array.isArray(rows) || rows.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Request body must contain a non-empty 'rows' array",
+        });
+      }
+
+      const errors = [];
+      let importedTypes = 0;
+      let importedVariants = 0;
+      // Cache created/found plan type IDs by name to avoid duplicate creates
+      const planTypeCache = {};
+
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const rowNum = i + 1;
+
+        const planName = (row["Plan Name"] || row["planName"] || "").trim();
+        const rawCategory = (
+          row["Category"] ||
+          row["category"] ||
+          ""
+        )
+          .trim()
+          .toLowerCase();
+        const description =
+          (row["Description"] || row["description"] || "").trim() || null;
+        const durationLabel = (
+          row["Duration Label"] ||
+          row["durationLabel"] ||
+          ""
+        ).trim();
+        const durationDays = parseInt(
+          row["Duration Days"] || row["durationDays"] || "0",
+          10,
+        );
+        const price = parseFloat(row["Price"] || row["price"] || "0");
+        const planActive =
+          (row["Plan Active"] || row["planActive"] || "true").toLowerCase() !==
+          "false";
+        const variantActive =
+          (
+            row["Variant Active"] ||
+            row["variantActive"] ||
+            "true"
+          ).toLowerCase() !== "false";
+
+        if (!planName) {
+          errors.push(`Row ${rowNum}: Plan Name is required`);
+          continue;
+        }
+
+        if (!["membership", "training"].includes(rawCategory)) {
+          errors.push(
+            `Row ${rowNum} (${planName}): Category must be 'membership' or 'training'`,
+          );
+          continue;
+        }
+
+        if (!durationLabel) {
+          errors.push(
+            `Row ${rowNum} (${planName}): Duration Label is required`,
+          );
+          continue;
+        }
+
+        if (isNaN(durationDays) || durationDays <= 0) {
+          errors.push(
+            `Row ${rowNum} (${planName}): Duration Days must be a positive number`,
+          );
+          continue;
+        }
+
+        if (isNaN(price) || price < 0) {
+          errors.push(
+            `Row ${rowNum} (${planName}): Price must be a non-negative number`,
+          );
+          continue;
+        }
+
+        try {
+          // Get or create the plan type
+          let planTypeId = planTypeCache[planName];
+          if (!planTypeId) {
+            const existing = await planTypeService.getAllPlanTypes(orgId, true);
+            const found = existing.find(
+              (pt) => pt.name.toLowerCase() === planName.toLowerCase(),
+            );
+            if (found) {
+              planTypeId = found.id;
+            } else {
+              const created = await planTypeService.createPlanType({
+                orgId,
+                name: planName,
+                description,
+                category: rawCategory,
+                isActive: planActive,
+              });
+              planTypeId = created.id;
+              importedTypes++;
+            }
+            planTypeCache[planName] = planTypeId;
+          }
+
+          // Create the variant
+          await planVariantService.createVariant({
+            planTypeId,
+            durationDays,
+            durationLabel,
+            price,
+            isActive: variantActive,
+          });
+          importedVariants++;
+        } catch (err) {
+          errors.push(`Row ${rowNum} (${planName}): ${err.message}`);
+        }
+      }
+
+      res.status(200).json({
+        success: true,
+        message: `${importedTypes} plan type(s) and ${importedVariants} variant(s) imported`,
+        importedTypes,
+        importedVariants,
+        errors,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 }
 
 module.exports = new PlanController();

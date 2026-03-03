@@ -2,14 +2,7 @@ const { requireOrgId } = require("../../../../../shared/helpers/auth.helper");
 const expenseService = require("../services/expense.service");
 
 class ExpenseController {
-  constructor() {
-    this.getExpenses = this.getExpenses.bind(this);
-    this.createExpense = this.createExpense.bind(this);
-    this.updateExpense = this.updateExpense.bind(this);
-    this.deleteExpense = this.deleteExpense.bind(this);
-  }
-
-  async getExpenses(req, res, next) {
+  getExpenses = async (req, res, next) => {
     try {
       const orgId = requireOrgId(req, res);
       if (!orgId) return;
@@ -21,9 +14,9 @@ class ExpenseController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async createExpense(req, res, next) {
+  createExpense = async (req, res, next) => {
     try {
       const orgId = requireOrgId(req, res);
       if (!orgId) return;
@@ -38,9 +31,9 @@ class ExpenseController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async updateExpense(req, res, next) {
+  updateExpense = async (req, res, next) => {
     try {
       const orgId = requireOrgId(req, res);
       if (!orgId) return;
@@ -51,9 +44,9 @@ class ExpenseController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async deleteExpense(req, res, next) {
+  deleteExpense = async (req, res, next) => {
     try {
       const orgId = requireOrgId(req, res);
       if (!orgId) return;
@@ -64,7 +57,7 @@ class ExpenseController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 }
 
 module.exports = new ExpenseController();

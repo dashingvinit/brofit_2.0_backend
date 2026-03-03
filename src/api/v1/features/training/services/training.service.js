@@ -1,5 +1,5 @@
 const trainingRepository = require("../repositories/training.repository");
-const trainingPaymentRepository = require("../repositories/training-payment.repository");
+const paymentRepository = require("../../../../../shared/repositories/payment.repository");
 const { prisma } = require("../../../../../config/prisma.config");
 const {
   validateMemberExists,
@@ -84,7 +84,7 @@ class TrainingService {
             status: "paid",
             reference: data.paymentReference || null,
             notes: data.paymentNotes || null,
-            paidAt: new Date(),
+            paidAt: data.paymentDate ? new Date(data.paymentDate) : new Date(),
           },
         });
       }
@@ -126,7 +126,7 @@ class TrainingService {
   async getTrainingDues(trainingId) {
     const training = await this._getTrainingOrThrow(trainingId);
     const paidAmount =
-      await trainingPaymentRepository.getPaidAmountForTraining(trainingId);
+      await paymentRepository.getPaidAmountForSubscription(trainingId, "trainingId");
 
     return calculateDues(training, paidAmount, "trainingId");
   }
@@ -182,7 +182,7 @@ class TrainingService {
   async getTrainingStats(orgId) {
     const [trainingStats, paymentStats] = await Promise.all([
       trainingRepository.getTrainingStats(orgId),
-      trainingPaymentRepository.getPaymentStats(orgId),
+      paymentRepository.getPaymentStats(orgId, { trainingOnly: true }),
     ]);
 
     return { ...trainingStats, ...paymentStats };

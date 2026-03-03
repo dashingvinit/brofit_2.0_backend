@@ -1,5 +1,5 @@
 const membershipRepository = require("../repositories/membership.repository");
-const paymentRepository = require("../repositories/payment.repository");
+const paymentRepository = require("../../../../../shared/repositories/payment.repository");
 const { prisma } = require("../../../../../config/prisma.config");
 const {
   validateMemberExists,
@@ -79,7 +79,7 @@ class MembershipService {
             status: "paid",
             reference: data.paymentReference || null,
             notes: data.paymentNotes || null,
-            paidAt: new Date(),
+            paidAt: data.paymentDate ? new Date(data.paymentDate) : new Date(),
           },
         });
       }
@@ -121,7 +121,7 @@ class MembershipService {
   async getMembershipDues(membershipId) {
     const membership = await this._getMembershipOrThrow(membershipId);
     const paidAmount =
-      await paymentRepository.getPaidAmountForMembership(membershipId);
+      await paymentRepository.getPaidAmountForSubscription(membershipId, "membershipId");
 
     return calculateDues(membership, paidAmount, "membershipId");
   }
@@ -185,7 +185,7 @@ class MembershipService {
   async getMembershipStats(orgId) {
     const [membershipStats, paymentStats] = await Promise.all([
       membershipRepository.getMembershipStats(orgId),
-      paymentRepository.getPaymentStats(orgId),
+      paymentRepository.getPaymentStats(orgId, { membershipOnly: true }),
     ]);
 
     return { ...membershipStats, ...paymentStats };
