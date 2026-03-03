@@ -2,16 +2,7 @@ const trainerService = require("../services/trainer.service");
 const { requireOrgId } = require("../../../../../shared/helpers/auth.helper");
 
 class TrainerController {
-  constructor() {
-    this.createTrainer = this.createTrainer.bind(this);
-    this.getAllTrainers = this.getAllTrainers.bind(this);
-    this.getTrainerById = this.getTrainerById.bind(this);
-    this.updateTrainer = this.updateTrainer.bind(this);
-    this.deactivateTrainer = this.deactivateTrainer.bind(this);
-    this.getTrainerClients = this.getTrainerClients.bind(this);
-  }
-
-  async createTrainer(req, res, next) {
+  createTrainer = async (req, res, next) => {
     try {
       const orgId = requireOrgId(req, res);
       if (!orgId) return;
@@ -29,9 +20,9 @@ class TrainerController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async getAllTrainers(req, res, next) {
+  getAllTrainers = async (req, res, next) => {
     try {
       const orgId = requireOrgId(req, res);
       if (!orgId) return;
@@ -45,9 +36,9 @@ class TrainerController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async getTrainerById(req, res, next) {
+  getTrainerById = async (req, res, next) => {
     try {
       const { id } = req.params;
       const trainer = await trainerService.getTrainerById(id);
@@ -59,9 +50,9 @@ class TrainerController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async updateTrainer(req, res, next) {
+  updateTrainer = async (req, res, next) => {
     try {
       const { id } = req.params;
       const trainer = await trainerService.updateTrainer(id, req.body);
@@ -74,9 +65,9 @@ class TrainerController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async deactivateTrainer(req, res, next) {
+  deactivateTrainer = async (req, res, next) => {
     try {
       const { id } = req.params;
       const trainer = await trainerService.deactivateTrainer(id);
@@ -89,9 +80,9 @@ class TrainerController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async getTrainerClients(req, res, next) {
+  getTrainerClients = async (req, res, next) => {
     try {
       const { id } = req.params;
       const trainer = await trainerService.getTrainerWithActiveClients(id);
@@ -103,7 +94,7 @@ class TrainerController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 }
 
 module.exports = new TrainerController();

@@ -11,6 +11,9 @@ router.use(requireAuth());
 // PLAN TYPE ROUTES
 // ============================================
 
+// Bulk import plan types + variants (must come before /types/:id)
+router.post("/import", planController.importPlans);
+
 router.get("/types", planController.getActivePlanTypes);
 router.get("/types/all", planController.getAllPlanTypes);
 router.get("/types/:id", planController.getPlanTypeById);

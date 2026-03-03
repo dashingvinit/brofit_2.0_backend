@@ -2,14 +2,8 @@ const { requireOrgId } = require("../../../../../shared/helpers/auth.helper");
 const analyticsService = require("../services/analytics.service");
 
 class AnalyticsController {
-  constructor() {
-    this.getSummary = this.getSummary.bind(this);
-    this.getRoi = this.getRoi.bind(this);
-    this.getTrends = this.getTrends.bind(this);
-  }
-
   // GET /financials/summary?month=YYYY-MM
-  async getSummary(req, res, next) {
+  getSummary = async (req, res, next) => {
     try {
       const orgId = requireOrgId(req, res);
       if (!orgId) return;
@@ -20,10 +14,10 @@ class AnalyticsController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
   // GET /financials/roi
-  async getRoi(req, res, next) {
+  getRoi = async (req, res, next) => {
     try {
       const orgId = requireOrgId(req, res);
       if (!orgId) return;
@@ -33,10 +27,10 @@ class AnalyticsController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
   // GET /financials/trends?months=12
-  async getTrends(req, res, next) {
+  getTrends = async (req, res, next) => {
     try {
       const orgId = requireOrgId(req, res);
       if (!orgId) return;
@@ -47,7 +41,7 @@ class AnalyticsController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 }
 
 module.exports = new AnalyticsController();

@@ -1,33 +1,12 @@
 const trainingService = require("../services/training.service");
-const trainingPaymentService = require("../services/training-payment.service");
+const paymentService = require("../../../../../shared/services/payment.service");
+const trainingRepository = require("../repositories/training.repository");
 const { requireOrgId } = require("../../../../../shared/helpers/auth.helper");
 
 class TrainingController {
-  constructor() {
-    this.createTraining = this.createTraining.bind(this);
-    this.getAllTrainings = this.getAllTrainings.bind(this);
-    this.getTrainingById = this.getTrainingById.bind(this);
-    this.getMemberTrainings = this.getMemberTrainings.bind(this);
-    this.getActiveTraining = this.getActiveTraining.bind(this);
-    this.getTrainingDues = this.getTrainingDues.bind(this);
-    this.updateTraining = this.updateTraining.bind(this);
-    this.cancelTraining = this.cancelTraining.bind(this);
-    this.freezeTraining = this.freezeTraining.bind(this);
-    this.unfreezeTraining = this.unfreezeTraining.bind(this);
-    this.getExpiringTrainings = this.getExpiringTrainings.bind(this);
-    this.getTrainingStats = this.getTrainingStats.bind(this);
-
-    this.recordPayment = this.recordPayment.bind(this);
-    this.getPaymentById = this.getPaymentById.bind(this);
-    this.getPaymentsByTraining = this.getPaymentsByTraining.bind(this);
-    this.getPaymentsByMember = this.getPaymentsByMember.bind(this);
-    this.getAllPayments = this.getAllPayments.bind(this);
-    this.updatePaymentStatus = this.updatePaymentStatus.bind(this);
-  }
-
   // ─── Training Endpoints ───────────────────────────────────
 
-  async createTraining(req, res, next) {
+  createTraining = async (req, res, next) => {
     try {
       const orgId = requireOrgId(req, res);
       if (!orgId) return;
@@ -41,7 +20,6 @@ class TrainingController {
         discountAmount: req.body.discountAmount,
         autoRenew: req.body.autoRenew,
         notes: req.body.notes,
-        // Optional initial payment
         paymentAmount: req.body.paymentAmount,
         paymentMethod: req.body.paymentMethod,
         paymentReference: req.body.paymentReference,
@@ -58,9 +36,9 @@ class TrainingController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async getAllTrainings(req, res, next) {
+  getAllTrainings = async (req, res, next) => {
     try {
       const orgId = requireOrgId(req, res);
       if (!orgId) return;
@@ -87,9 +65,9 @@ class TrainingController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async getTrainingById(req, res, next) {
+  getTrainingById = async (req, res, next) => {
     try {
       const { id } = req.params;
       const training = await trainingService.getTrainingById(id);
@@ -101,9 +79,9 @@ class TrainingController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async getMemberTrainings(req, res, next) {
+  getMemberTrainings = async (req, res, next) => {
     try {
       const { memberId } = req.params;
       const trainings =
@@ -116,9 +94,9 @@ class TrainingController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async getActiveTraining(req, res, next) {
+  getActiveTraining = async (req, res, next) => {
     try {
       const orgId = requireOrgId(req, res);
       if (!orgId) return;
@@ -136,9 +114,9 @@ class TrainingController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async getTrainingDues(req, res, next) {
+  getTrainingDues = async (req, res, next) => {
     try {
       const { id } = req.params;
       const dues = await trainingService.getTrainingDues(id);
@@ -150,9 +128,9 @@ class TrainingController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async updateTraining(req, res, next) {
+  updateTraining = async (req, res, next) => {
     try {
       const { id } = req.params;
       const training = await trainingService.updateTraining(
@@ -168,9 +146,9 @@ class TrainingController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async cancelTraining(req, res, next) {
+  cancelTraining = async (req, res, next) => {
     try {
       const { id } = req.params;
       const training = await trainingService.cancelTraining(id);
@@ -183,9 +161,9 @@ class TrainingController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async freezeTraining(req, res, next) {
+  freezeTraining = async (req, res, next) => {
     try {
       const { id } = req.params;
       const training = await trainingService.freezeTraining(id);
@@ -198,9 +176,9 @@ class TrainingController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async unfreezeTraining(req, res, next) {
+  unfreezeTraining = async (req, res, next) => {
     try {
       const { id } = req.params;
       const training = await trainingService.unfreezeTraining(id);
@@ -213,9 +191,9 @@ class TrainingController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async getExpiringTrainings(req, res, next) {
+  getExpiringTrainings = async (req, res, next) => {
     try {
       const orgId = requireOrgId(req, res);
       if (!orgId) return;
@@ -233,9 +211,9 @@ class TrainingController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async getTrainingStats(req, res, next) {
+  getTrainingStats = async (req, res, next) => {
     try {
       const orgId = requireOrgId(req, res);
       if (!orgId) return;
@@ -249,11 +227,11 @@ class TrainingController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
   // ─── Payment Endpoints ──────────────────────────────────────
 
-  async recordPayment(req, res, next) {
+  recordPayment = async (req, res, next) => {
     try {
       const orgId = requireOrgId(req, res);
       if (!orgId) return;
@@ -269,7 +247,11 @@ class TrainingController {
         notes: req.body.notes,
       };
 
-      const payment = await trainingPaymentService.recordPayment(data);
+      const payment = await paymentService.recordPayment(data, {
+        subscriptionRepo: trainingRepository,
+        subscriptionIdField: "trainingId",
+        subscriptionLabel: "Training",
+      });
 
       res.status(201).json({
         success: true,
@@ -279,12 +261,12 @@ class TrainingController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async getPaymentById(req, res, next) {
+  getPaymentById = async (req, res, next) => {
     try {
       const { id } = req.params;
-      const payment = await trainingPaymentService.getPaymentById(id);
+      const payment = await paymentService.getPaymentById(id, { trainingOnly: true });
 
       res.status(200).json({
         success: true,
@@ -293,13 +275,13 @@ class TrainingController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async getPaymentsByTraining(req, res, next) {
+  getPaymentsByTraining = async (req, res, next) => {
     try {
       const { id } = req.params;
       const payments =
-        await trainingPaymentService.getPaymentsByTraining(id);
+        await paymentService.getPaymentsBySubscription(id, "trainingId");
 
       res.status(200).json({
         success: true,
@@ -308,18 +290,19 @@ class TrainingController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async getPaymentsByMember(req, res, next) {
+  getPaymentsByMember = async (req, res, next) => {
     try {
       const { memberId } = req.params;
       const page = parseInt(req.query.page) || 1;
       const limit = parseInt(req.query.limit) || 10;
 
-      const result = await trainingPaymentService.getPaymentsByMember(
+      const result = await paymentService.getPaymentsByMember(
         memberId,
         page,
         limit,
+        { trainingOnly: true },
       );
 
       res.status(200).json({
@@ -330,9 +313,9 @@ class TrainingController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async getAllPayments(req, res, next) {
+  getAllPayments = async (req, res, next) => {
     try {
       const orgId = requireOrgId(req, res);
       if (!orgId) return;
@@ -345,11 +328,12 @@ class TrainingController {
       if (req.query.trainingId) filters.trainingId = req.query.trainingId;
       if (req.query.method) filters.method = req.query.method;
 
-      const result = await trainingPaymentService.getAllPayments(
+      const result = await paymentService.getAllPayments(
         orgId,
         page,
         limit,
         filters,
+        { trainingOnly: true },
       );
 
       res.status(200).json({
@@ -360,9 +344,9 @@ class TrainingController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async updatePaymentStatus(req, res, next) {
+  updatePaymentStatus = async (req, res, next) => {
     try {
       const { id } = req.params;
       const { status } = req.body;
@@ -373,7 +357,7 @@ class TrainingController {
           .json({ success: false, message: "Payment status is required" });
       }
 
-      const payment = await trainingPaymentService.updatePaymentStatus(id, status);
+      const payment = await paymentService.updatePaymentStatus(id, status);
 
       res.status(200).json({
         success: true,
@@ -383,7 +367,7 @@ class TrainingController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 }
 
 module.exports = new TrainingController();

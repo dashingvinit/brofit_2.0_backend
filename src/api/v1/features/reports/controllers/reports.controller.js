@@ -2,14 +2,7 @@ const { requireOrgId } = require("../../../../../shared/helpers/auth.helper");
 const reportsService = require("../services/reports.service");
 
 class ReportsController {
-  constructor() {
-    this.expireSubscriptions = this.expireSubscriptions.bind(this);
-    this.getInactiveCandidates = this.getInactiveCandidates.bind(this);
-    this.getDuesReport = this.getDuesReport.bind(this);
-    this.getActivityTrend = this.getActivityTrend.bind(this);
-  }
-
-  async expireSubscriptions(req, res, next) {
+  expireSubscriptions = async (req, res, next) => {
     try {
       const orgId = requireOrgId(req, res);
       if (!orgId) return;
@@ -24,9 +17,9 @@ class ReportsController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async getInactiveCandidates(req, res, next) {
+  getInactiveCandidates = async (req, res, next) => {
     try {
       const orgId = requireOrgId(req, res);
       if (!orgId) return;
@@ -48,9 +41,9 @@ class ReportsController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async getDuesReport(req, res, next) {
+  getDuesReport = async (req, res, next) => {
     try {
       const orgId = requireOrgId(req, res);
       if (!orgId) return;
@@ -76,9 +69,9 @@ class ReportsController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 
-  async getActivityTrend(req, res, next) {
+  getActivityTrend = async (req, res, next) => {
     try {
       const orgId = requireOrgId(req, res);
       if (!orgId) return;
@@ -90,7 +83,7 @@ class ReportsController {
     } catch (error) {
       next(error);
     }
-  }
+  };
 }
 
 module.exports = new ReportsController();

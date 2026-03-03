@@ -15,6 +15,9 @@ router.get("/search", memberController.searchMembers);
 // Get member statistics
 router.get("/stats", memberController.getMemberStats);
 
+// Bulk import members from CSV rows
+router.post("/import", memberController.importMembers);
+
 // Get all members in an organization
 router.get("/", memberController.getAllMembers);
 

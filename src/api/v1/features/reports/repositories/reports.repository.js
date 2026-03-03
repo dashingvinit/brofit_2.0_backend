@@ -144,7 +144,6 @@ class ReportsRepository {
 
     const where = {
       orgId,
-      isActive: true,
       memberships: { none: { status: "active" } },
       trainings: { none: { status: "active" } },
     };
