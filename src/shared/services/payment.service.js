@@ -1,5 +1,6 @@
 const paymentRepository = require("../repositories/payment.repository");
 const {
+  createError,
   validateMemberExists,
   validatePaymentAmount,
 } = require("../helpers/subscription.helper");
@@ -15,14 +16,8 @@ class PaymentService {
     subscriptionIdField = "membershipId",
     subscriptionLabel = "Membership",
   } = {}) {
-    if (!data.orgId) {
-      throw new Error("Organization ID is required");
-    }
-    if (!data.memberId) {
-      throw new Error("Member ID is required");
-    }
     if (!data.amount || data.amount <= 0) {
-      throw new Error("Payment amount must be greater than 0");
+      throw createError("Payment amount must be greater than 0", 400);
     }
 
     await validateMemberExists(data.memberId);
@@ -31,7 +26,7 @@ class PaymentService {
     if (subscriptionId && subscriptionRepo) {
       const subscription = await subscriptionRepo.findByIdWithDetails(subscriptionId);
       if (!subscription) {
-        throw new Error(`${subscriptionLabel} not found`);
+        throw createError(`${subscriptionLabel} not found`, 404);
       }
 
       const paidAmount = await paymentRepository.getPaidAmountForSubscription(
@@ -70,7 +65,7 @@ class PaymentService {
 
     const payment = await paymentRepository.get(paymentId, { include });
     if (!payment) {
-      throw new Error("Payment not found");
+      throw createError("Payment not found", 404);
     }
     return payment;
   }
@@ -98,7 +93,7 @@ class PaymentService {
   async updatePaymentStatus(paymentId, status) {
     const payment = await paymentRepository.get(paymentId);
     if (!payment) {
-      throw new Error("Payment not found");
+      throw createError("Payment not found", 404);
     }
 
     const updateData = { status };

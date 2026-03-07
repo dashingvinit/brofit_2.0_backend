@@ -1,21 +1,14 @@
 const planVariantRepository = require("../repositories/plan-variant.repository");
-const planTypeRepository = require("../repositories/plan-type.repository");
+const planTypeService = require("./plan-type.service");
+const { createError } = require("../../../../../shared/helpers/subscription.helper");
 
 class PlanVariantService {
-  async _getVariantOrThrow(variantId, errorMessage = "Plan variant not found") {
+  async _getVariantOrThrow(variantId) {
     const variant = await planVariantRepository.get(variantId);
     if (!variant) {
-      throw new Error(errorMessage);
+      throw createError("Plan variant not found", 404);
     }
     return variant;
-  }
-
-  async _getPlanTypeOrThrow(planTypeId, errorMessage = "Plan type not found") {
-    const planType = await planTypeRepository.get(planTypeId);
-    if (!planType) {
-      throw new Error(errorMessage);
-    }
-    return planType;
   }
 
   async createVariant(variantData) {
@@ -23,8 +16,7 @@ class PlanVariantService {
       throw new Error("Plan type ID is required");
     }
 
-    // Verify plan type exists
-    await this._getPlanTypeOrThrow(variantData.planTypeId);
+    await planTypeService.getPlanTypeById(variantData.planTypeId, false);
 
     return await planVariantRepository.create({
       planTypeId: variantData.planTypeId,
@@ -47,8 +39,7 @@ class PlanVariantService {
   }
 
   async getVariantsByPlanType(planTypeId, includeInactive = false) {
-    // Verify plan type exists
-    await this._getPlanTypeOrThrow(planTypeId);
+    await planTypeService.getPlanTypeById(planTypeId, false);
     return await planVariantRepository.findByPlanType(planTypeId, includeInactive);
   }
 

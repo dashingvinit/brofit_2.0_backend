@@ -30,10 +30,11 @@ const errorHandler = (err, req, res, next) => {
     message = "Invalid reference";
   }
 
-  // Response object
+  // Response object — always pass through client errors (4xx); hide internals for 5xx in production
+  const isClientError = statusCode >= 400 && statusCode < 500;
   const response = {
     success: false,
-    message: config.isDevelopment() ? message : "Internal server error",
+    message: isClientError || config.isDevelopment() ? message : "Internal server error",
     ...(err.errors && err.errors.length > 0 && { errors: err.errors }),
     ...(config.isDevelopment() && { stack: err.stack }),
   };

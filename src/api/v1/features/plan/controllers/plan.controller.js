@@ -16,25 +16,12 @@ class PlanController {
       const orgId = requireOrgId(req, res);
       if (!orgId) return;
 
-      // ensure category is explicitly provided and valid.  defaulting
-      // silently to "membership" caused training plans to be misclassified.
-      const providedCategory = req.body.category;
-      if (
-        !providedCategory ||
-        !["membership", "training"].includes(providedCategory)
-      ) {
-        return res.status(400).json({
-          success: false,
-          message: "Valid plan category (membership or training) is required",
-        });
-      }
-
       const planTypeData = {
         orgId,
         name: req.body.name,
         description: req.body.description,
-        category: providedCategory,
-        isActive: req.body.isActive !== undefined ? req.body.isActive : true,
+        category: req.body.category,
+        isActive: req.body.isActive,
       };
 
       const planType = await planTypeService.createPlanType(planTypeData);
@@ -198,7 +185,7 @@ class PlanController {
         durationDays: req.body.durationDays,
         durationLabel: req.body.durationLabel,
         price: req.body.price,
-        isActive: req.body.isActive !== undefined ? req.body.isActive : true,
+        isActive: req.body.isActive,
       };
 
       const variant = await planVariantService.createVariant(variantData);
@@ -333,7 +320,6 @@ class PlanController {
    * the plan type (if it doesn't already exist) and every row adds a variant.
    */
   importPlans = async (req, res, next) => {
-    const { requireOrgId } = require("../../../../../shared/helpers/auth.helper");
     try {
       const orgId = requireOrgId(req, res);
       if (!orgId) return;

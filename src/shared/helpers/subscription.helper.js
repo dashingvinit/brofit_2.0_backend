@@ -1,5 +1,11 @@
 const { prisma } = require("../../config/prisma.config");
 
+function createError(message, status = 400) {
+  const err = new Error(message);
+  err.statusCode = status;
+  return err;
+}
+
 /**
  * Validates that a member exists. Throws if not found.
  */
@@ -8,7 +14,7 @@ async function validateMemberExists(memberId) {
     where: { id: memberId },
   });
   if (!member) {
-    throw new Error("Member not found");
+    throw createError("Member not found", 404);
   }
   return member;
 }
@@ -23,15 +29,13 @@ async function validatePlanVariant(planVariantId, expectedCategory = null) {
     include: { planType: true },
   });
   if (!planVariant) {
-    throw new Error("Plan variant not found");
+    throw createError("Plan variant not found", 404);
   }
   if (!planVariant.isActive) {
-    throw new Error("Plan variant is not active");
+    throw createError("Plan variant is not active", 400);
   }
   if (expectedCategory && planVariant.planType.category !== expectedCategory) {
-    throw new Error(
-      `Plan variant does not belong to a ${expectedCategory} plan`,
-    );
+    throw createError(`Plan variant does not belong to a ${expectedCategory} plan`, 400);
   }
   return planVariant;
 }
@@ -55,7 +59,7 @@ function calculatePricing(planPrice, discountAmount = 0) {
   const finalPrice = priceAtPurchase - discountAmount;
 
   if (finalPrice < 0) {
-    throw new Error("Discount amount cannot exceed the plan price");
+    throw createError("Discount amount cannot exceed the plan price", 400);
   }
 
   return { priceAtPurchase, discountAmount, finalPrice };
@@ -69,19 +73,17 @@ function validateStatusTransition(currentStatus, action, entityName) {
   switch (action) {
     case "cancel":
       if (currentStatus === "cancelled") {
-        throw new Error(`${entityName} is already cancelled`);
+        throw createError(`${entityName} is already cancelled`, 409);
       }
       break;
     case "freeze":
       if (currentStatus !== "active") {
-        throw new Error(`Only active ${entityName.toLowerCase()}s can be frozen`);
+        throw createError(`Only active ${entityName.toLowerCase()}s can be frozen`, 409);
       }
       break;
     case "unfreeze":
       if (currentStatus !== "frozen") {
-        throw new Error(
-          `Only frozen ${entityName.toLowerCase()}s can be unfrozen`,
-        );
+        throw createError(`Only frozen ${entityName.toLowerCase()}s can be unfrozen`, 409);
       }
       break;
   }
@@ -111,12 +113,10 @@ function validatePaymentAmount(amount, finalPrice, paidAmount, entityName) {
   const dueAmount = finalPrice - paidAmount;
 
   if (dueAmount <= 0) {
-    throw new Error(`This ${entityName.toLowerCase()} is already fully paid`);
+    throw createError(`This ${entityName.toLowerCase()} is already fully paid`, 409);
   }
   if (amount > dueAmount && dueAmount > 0) {
-    throw new Error(
-      `Payment amount (${amount}) exceeds due amount (${dueAmount})`,
-    );
+    throw createError(`Payment amount (${amount}) exceeds due amount (${dueAmount})`, 400);
   }
 }
 
@@ -147,6 +147,7 @@ async function countActiveMembers(orgId) {
 }
 
 module.exports = {
+  createError,
   validateMemberExists,
   validatePlanVariant,
   calculateDates,

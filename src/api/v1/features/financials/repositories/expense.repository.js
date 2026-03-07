@@ -52,8 +52,8 @@ class ExpenseRepository {
         EXTRACT(YEAR  FROM date)::int AS year,
         EXTRACT(MONTH FROM date)::int AS month,
         COALESCE(SUM(amount), 0)      AS total
-      FROM "Expense"
-      WHERE "orgId" = ${orgId}
+      FROM expenses
+      WHERE org_id = ${orgId}
         AND date >= ${from}
         AND date <= ${to}
       GROUP BY year, month

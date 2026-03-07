@@ -1,7 +1,7 @@
 const { requireOrgId } = require("../../../../../shared/helpers/auth.helper");
 const analyticsService = require("../services/analytics.service");
 
-class AnalyticsController {
+class FinancialsAnalyticsController {
   // GET /financials/summary?month=YYYY-MM
   getSummary = async (req, res, next) => {
     try {
@@ -44,4 +44,4 @@ class AnalyticsController {
   };
 }
 
-module.exports = new AnalyticsController();
+module.exports = new FinancialsAnalyticsController();

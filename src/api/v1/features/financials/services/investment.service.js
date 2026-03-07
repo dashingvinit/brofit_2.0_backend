@@ -1,4 +1,5 @@
 const investmentRepository = require("../repositories/investment.repository");
+const { createError } = require("../../../../../shared/helpers/subscription.helper");
 
 class InvestmentService {
   async createInvestment(orgId, { name, amount, date, notes }) {
@@ -17,11 +18,8 @@ class InvestmentService {
 
   async updateInvestment(id, orgId, data) {
     const existing = await investmentRepository.findOne(id, orgId);
-    if (!existing) {
-      const err = new Error("Investment not found");
-      err.status = 404;
-      throw err;
-    }
+    if (!existing) throw createError("Investment not found", 404);
+
     const updates = {};
     if (data.name !== undefined) updates.name = data.name;
     if (data.amount !== undefined) updates.amount = parseFloat(data.amount);
@@ -33,11 +31,7 @@ class InvestmentService {
 
   async deleteInvestment(id, orgId) {
     const existing = await investmentRepository.findOne(id, orgId);
-    if (!existing) {
-      const err = new Error("Investment not found");
-      err.status = 404;
-      throw err;
-    }
+    if (!existing) throw createError("Investment not found", 404);
     await investmentRepository.delete(id, orgId);
   }
 }
