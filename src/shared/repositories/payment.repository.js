@@ -79,6 +79,42 @@ class PaymentRepository extends CrudRepository {
     return result._sum.amount || 0;
   }
 
+  /**
+   * Sum paid revenue in a date range (paidAt window).
+   */
+  async sumInRange(orgId, from, to) {
+    const result = await prisma.payment.aggregate({
+      where: { orgId, status: "paid", paidAt: { gte: from, lte: to } },
+      _sum: { amount: true },
+    });
+    return result._sum.amount || 0;
+  }
+
+  /**
+   * Sum paid revenue grouped by year+month for a date range.
+   * Returns a Map keyed by "YYYY-M" -> total amount.
+   * Single query replacing N per-month sumInRange calls.
+   */
+  async revenueByMonths(orgId, from, to) {
+    const rows = await prisma.$queryRaw`
+      SELECT
+        EXTRACT(YEAR  FROM "paidAt")::int AS year,
+        EXTRACT(MONTH FROM "paidAt")::int AS month,
+        COALESCE(SUM(amount), 0)          AS total
+      FROM "Payment"
+      WHERE "orgId" = ${orgId}
+        AND status  = 'paid'
+        AND "paidAt" >= ${from}
+        AND "paidAt" <= ${to}
+      GROUP BY year, month
+    `;
+    const map = new Map();
+    for (const r of rows) {
+      map.set(`${r.year}-${r.month}`, Number(r.total));
+    }
+    return map;
+  }
+
   async getPaymentStats(orgId, { trainingOnly = false, membershipOnly = false } = {}) {
     const startOfMonth = getStartOfCurrentMonth();
     const baseWhere = { orgId, status: "paid" };

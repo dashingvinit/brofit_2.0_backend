@@ -128,6 +128,24 @@ function getStartOfCurrentMonth() {
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0, 0));
 }
 
+/**
+ * Canonical definition of "active member":
+ * isActive=true AND has at least one active membership or training.
+ * Used by both analytics and reports features to stay in sync.
+ */
+async function countActiveMembers(orgId) {
+  return prisma.member.count({
+    where: {
+      orgId,
+      isActive: true,
+      OR: [
+        { memberships: { some: { status: "active" } } },
+        { trainings: { some: { status: "active" } } },
+      ],
+    },
+  });
+}
+
 module.exports = {
   validateMemberExists,
   validatePlanVariant,
@@ -137,4 +155,5 @@ module.exports = {
   calculateDues,
   validatePaymentAmount,
   getStartOfCurrentMonth,
+  countActiveMembers,
 };

@@ -40,6 +40,30 @@ class ExpenseRepository {
     });
     return result._sum.amount || 0;
   }
+
+  /**
+   * Sum expenses grouped by year+month for a date range.
+   * Returns a Map keyed by "YYYY-M" -> total amount.
+   * Single query replacing N per-month sumInRange calls.
+   */
+  async sumByMonths(orgId, from, to) {
+    const rows = await prisma.$queryRaw`
+      SELECT
+        EXTRACT(YEAR  FROM date)::int AS year,
+        EXTRACT(MONTH FROM date)::int AS month,
+        COALESCE(SUM(amount), 0)      AS total
+      FROM "Expense"
+      WHERE "orgId" = ${orgId}
+        AND date >= ${from}
+        AND date <= ${to}
+      GROUP BY year, month
+    `;
+    const map = new Map();
+    for (const r of rows) {
+      map.set(`${r.year}-${r.month}`, Number(r.total));
+    }
+    return map;
+  }
 }
 
 module.exports = new ExpenseRepository();

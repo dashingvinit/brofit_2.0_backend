@@ -1,4 +1,4 @@
-const { prisma } = require("../../../../../config/prisma.config");
+const paymentRepository = require("../../../../../shared/repositories/payment.repository");
 const expenseRepository = require("../repositories/expense.repository");
 const investmentRepository = require("../repositories/investment.repository");
 
@@ -7,20 +7,12 @@ class AnalyticsService {
    * Revenue = sum of paid payments in [from, to].
    */
   async getRevenue(orgId, from, to) {
-    const result = await prisma.payment.aggregate({
-      where: {
-        orgId,
-        status: "paid",
-        paidAt: { gte: from, lte: to },
-      },
-      _sum: { amount: true },
-    });
-    return result._sum.amount || 0;
+    return paymentRepository.sumInRange(orgId, from, to);
   }
 
   /**
-   * Monthly P&L summary for a given month ("YYYY-MM") or full year ("YYYY").
-   * Returns { revenue, expenses, netProfit, month? }.
+   * Monthly P&L summary for a given month ("YYYY-MM").
+   * Returns { period, from, to, revenue, expenses, netProfit }.
    */
   async getMonthlySummary(orgId, month) {
     let from, to;
@@ -29,14 +21,13 @@ class AnalyticsService {
       from = new Date(year, mon - 1, 1);
       to = new Date(year, mon, 0, 23, 59, 59, 999);
     } else {
-      // Default: current month
       const now = new Date();
       from = new Date(now.getFullYear(), now.getMonth(), 1);
       to = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
     }
 
     const [revenue, expenses] = await Promise.all([
-      this.getRevenue(orgId, from, to),
+      paymentRepository.sumInRange(orgId, from, to),
       expenseRepository.sumInRange(orgId, from, to),
     ]);
 
@@ -56,12 +47,12 @@ class AnalyticsService {
    */
   async getRoi(orgId) {
     const now = new Date();
-    const epoch = new Date(0); // safe all-time floor
+    const epoch = new Date(0);
 
     const [totalInvested, totalRevenue, totalExpenses, earliestInvestmentDate] =
       await Promise.all([
         investmentRepository.totalInvested(orgId, now),
-        this.getRevenue(orgId, epoch, now),
+        paymentRepository.sumInRange(orgId, epoch, now),
         expenseRepository.sumInRange(orgId, epoch, now),
         investmentRepository.getEarliestDate(orgId),
       ]);
@@ -94,39 +85,28 @@ class AnalyticsService {
 
   /**
    * Monthly revenue + expense trend for the last N months.
-   * Returns array of { year, month, label, revenue, expenses, netProfit }.
-   * All months are queried concurrently.
+   * Returns array of { year, month, revenue, expenses, netProfit }.
+   * Uses 2 DB queries total instead of N×2.
    */
   async getTrends(orgId, months = 12) {
     const now = new Date();
+    const from = new Date(now.getFullYear(), now.getMonth() - (months - 1), 1);
+    const to = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
 
-    const monthRanges = Array.from({ length: months }, (_, i) => {
+    const [revenueMap, expenseMap] = await Promise.all([
+      paymentRepository.revenueByMonths(orgId, from, to),
+      expenseRepository.sumByMonths(orgId, from, to),
+    ]);
+
+    return Array.from({ length: months }, (_, i) => {
       const d = new Date(now.getFullYear(), now.getMonth() - (months - 1 - i), 1);
       const year = d.getFullYear();
-      const month = d.getMonth(); // 0-indexed
-      return {
-        year,
-        month,
-        from: new Date(year, month, 1),
-        to: new Date(year, month + 1, 0, 23, 59, 59, 999),
-      };
+      const month = d.getMonth() + 1; // 1-indexed
+      const key = `${year}-${month}`;
+      const revenue = revenueMap.get(key) || 0;
+      const expenses = expenseMap.get(key) || 0;
+      return { year, month, revenue, expenses, netProfit: revenue - expenses };
     });
-
-    return Promise.all(
-      monthRanges.map(async ({ year, month, from, to }) => {
-        const [revenue, expenses] = await Promise.all([
-          this.getRevenue(orgId, from, to),
-          expenseRepository.sumInRange(orgId, from, to),
-        ]);
-        return {
-          year,
-          month: month + 1, // 1-indexed for the client
-          revenue,
-          expenses,
-          netProfit: revenue - expenses,
-        };
-      }),
-    );
   }
 }
 

@@ -1,4 +1,6 @@
+const { Prisma } = require("@prisma/client");
 const { prisma } = require("../../../../../config/prisma.config");
+const { countActiveMembers } = require("../../../../../shared/helpers/subscription.helper");
 
 class ReportsRepository {
   /**
@@ -17,16 +19,7 @@ class ReportsRepository {
   async getMemberCounts(orgId) {
     const [total, active, inactive] = await Promise.all([
       prisma.member.count({ where: { orgId } }),
-      prisma.member.count({
-        where: {
-          orgId,
-          isActive: true,
-          OR: [
-            { memberships: { some: { status: "active" } } },
-            { trainings: { some: { status: "active" } } },
-          ],
-        },
-      }),
+      countActiveMembers(orgId),
       prisma.member.count({
         where: {
           orgId,
@@ -144,6 +137,7 @@ class ReportsRepository {
 
     const where = {
       orgId,
+      isActive: true,
       memberships: { none: { status: "active" } },
       trainings: { none: { status: "active" } },
     };
@@ -185,44 +179,114 @@ class ReportsRepository {
 
   /**
    * Get all members with outstanding dues across memberships and trainings.
+   * Dues are computed at the DB level to avoid loading all records into memory.
    * Optionally filter by a specific memberId.
    */
   async getMembersWithDues(orgId, page = 1, limit = 10, filters = {}) {
     const skip = (page - 1) * limit;
+    const memberFilter = filters.memberId
+      ? Prisma.sql`AND m.id = ${filters.memberId}`
+      : Prisma.empty;
 
-    // Build member filter
-    const memberWhere = { orgId };
-    if (filters.memberId) memberWhere.id = filters.memberId;
+    // Step 1: compute per-member dues totals in SQL, filter to those with dues > 0
+    const dueRows = await prisma.$queryRaw(Prisma.sql`
+      SELECT
+        m.id            AS "memberId",
+        m."firstName",
+        m."lastName",
+        m.phone,
+        m.email,
+        m."isActive",
+        COALESCE(ms_dues.total, 0)  AS "membershipDuesTotal",
+        COALESCE(tr_dues.total, 0)  AS "trainingDuesTotal",
+        COALESCE(ms_dues.total, 0) + COALESCE(tr_dues.total, 0) AS "totalDue"
+      FROM "Member" m
+      LEFT JOIN (
+        SELECT ms."memberId",
+               SUM(GREATEST(ms."finalPrice" - COALESCE(p.paid, 0), 0)) AS total
+        FROM "Membership" ms
+        LEFT JOIN (
+          SELECT "membershipId", SUM(amount) AS paid
+          FROM "Payment"
+          WHERE status = 'paid'
+          GROUP BY "membershipId"
+        ) p ON p."membershipId" = ms.id
+        WHERE ms."orgId" = ${orgId}
+        GROUP BY ms."memberId"
+        HAVING SUM(GREATEST(ms."finalPrice" - COALESCE(p.paid, 0), 0)) > 0
+      ) ms_dues ON ms_dues."memberId" = m.id
+      LEFT JOIN (
+        SELECT tr."memberId",
+               SUM(GREATEST(tr."finalPrice" - COALESCE(p.paid, 0), 0)) AS total
+        FROM "Training" tr
+        LEFT JOIN (
+          SELECT "trainingId", SUM(amount) AS paid
+          FROM "Payment"
+          WHERE status = 'paid'
+          GROUP BY "trainingId"
+        ) p ON p."trainingId" = tr.id
+        WHERE tr."orgId" = ${orgId}
+        GROUP BY tr."memberId"
+        HAVING SUM(GREATEST(tr."finalPrice" - COALESCE(p.paid, 0), 0)) > 0
+      ) tr_dues ON tr_dues."memberId" = m.id
+      WHERE m."orgId" = ${orgId}
+        ${memberFilter}
+        AND (COALESCE(ms_dues.total, 0) + COALESCE(tr_dues.total, 0)) > 0
+      ORDER BY "totalDue" DESC
+    `);
 
-    // Get members with their memberships/trainings + payments
-    const members = await prisma.member.findMany({
-      where: memberWhere,
-      orderBy: { firstName: "asc" },
-      include: {
-        memberships: {
-          include: {
-            payments: { where: { status: "paid" } },
-            planVariant: { include: { planType: true } },
-          },
+    const total = dueRows.length;
+    const grandTotal = dueRows.reduce((sum, r) => sum + Number(r.totalDue), 0);
+    const pageRows = dueRows.slice(skip, skip + limit);
+
+    if (pageRows.length === 0) {
+      return {
+        data: [],
+        summary: { totalMembersWithDues: total, grandTotal },
+        pagination: {
+          page, limit, total,
+          pages: Math.ceil(total / limit),
+          hasNext: page * limit < total,
+          hasPrev: page > 1,
         },
-        trainings: {
-          include: {
-            payments: { where: { status: "paid" } },
-            planVariant: { include: { planType: true } },
-          },
+      };
+    }
+
+    // Step 2: fetch detailed dues breakdown only for the current page of members
+    const memberIds = pageRows.map((r) => r.memberId);
+
+    const [memberships, trainings] = await Promise.all([
+      prisma.membership.findMany({
+        where: { orgId, memberId: { in: memberIds } },
+        include: {
+          payments: { where: { status: "paid" }, select: { amount: true } },
+          planVariant: { select: { durationLabel: true, planType: { select: { name: true } } } },
         },
-      },
-    });
+      }),
+      prisma.training.findMany({
+        where: { orgId, memberId: { in: memberIds } },
+        include: {
+          payments: { where: { status: "paid" }, select: { amount: true } },
+          planVariant: { select: { durationLabel: true, planType: { select: { name: true } } } },
+        },
+      }),
+    ]);
 
-    // Calculate dues per member
-    const membersWithDues = [];
-    for (const member of members) {
-      let membershipDuesTotal = 0;
-      let trainingDuesTotal = 0;
+    // Index by memberId for O(1) lookup
+    const msMap = {};
+    for (const ms of memberships) {
+      (msMap[ms.memberId] ||= []).push(ms);
+    }
+    const trMap = {};
+    for (const tr of trainings) {
+      (trMap[tr.memberId] ||= []).push(tr);
+    }
 
+    const data = pageRows.map((row) => {
       const membershipDues = [];
-      for (const ms of member.memberships) {
-        const paid = ms.payments.reduce((sum, p) => sum + p.amount, 0);
+      let membershipDuesTotal = 0;
+      for (const ms of msMap[row.memberId] || []) {
+        const paid = ms.payments.reduce((s, p) => s + p.amount, 0);
         const due = Math.max(0, ms.finalPrice - paid);
         if (due > 0) {
           membershipDuesTotal += due;
@@ -240,8 +304,9 @@ class ReportsRepository {
       }
 
       const trainingDues = [];
-      for (const tr of member.trainings) {
-        const paid = tr.payments.reduce((sum, p) => sum + p.amount, 0);
+      let trainingDuesTotal = 0;
+      for (const tr of trMap[row.memberId] || []) {
+        const paid = tr.payments.reduce((s, p) => s + p.amount, 0);
         const due = Math.max(0, tr.finalPrice - paid);
         if (due > 0) {
           trainingDuesTotal += due;
@@ -258,38 +323,24 @@ class ReportsRepository {
         }
       }
 
-      const totalDue = membershipDuesTotal + trainingDuesTotal;
-      if (totalDue > 0) {
-        membersWithDues.push({
-          memberId: member.id,
-          firstName: member.firstName,
-          lastName: member.lastName,
-          phone: member.phone,
-          email: member.email,
-          isActive: member.isActive,
-          totalDue,
-          membershipDuesTotal,
-          trainingDuesTotal,
-          membershipDues,
-          trainingDues,
-        });
-      }
-    }
-
-    // Sort by totalDue descending (highest dues first)
-    membersWithDues.sort((a, b) => b.totalDue - a.totalDue);
-
-    // Manual pagination on the filtered results
-    const total = membersWithDues.length;
-    const paginatedData = membersWithDues.slice(skip, skip + limit);
-    const grandTotal = membersWithDues.reduce((sum, m) => sum + m.totalDue, 0);
+      return {
+        memberId: row.memberId,
+        firstName: row.firstName,
+        lastName: row.lastName,
+        phone: row.phone,
+        email: row.email,
+        isActive: row.isActive,
+        totalDue: Number(row.totalDue),
+        membershipDuesTotal,
+        trainingDuesTotal,
+        membershipDues,
+        trainingDues,
+      };
+    });
 
     return {
-      data: paginatedData,
-      summary: {
-        totalMembersWithDues: total,
-        grandTotal,
-      },
+      data,
+      summary: { totalMembersWithDues: total, grandTotal },
       pagination: {
         page,
         limit,
