@@ -1,20 +1,17 @@
 const memberRepository = require("../repositories/member.repository");
 const { prisma } = require("../../../../../config/prisma.config");
+const { createError } = require("../../../../../shared/helpers/subscription.helper");
 
 class MemberService {
-  async _getMemberOrThrow(memberId, errorMessage = "Member not found") {
+  async _getMemberOrThrow(memberId) {
     const member = await memberRepository.get(memberId);
     if (!member) {
-      throw new Error(errorMessage);
+      throw createError("Member not found", 404);
     }
     return member;
   }
 
   async createMember(memberData) {
-    if (!memberData.orgId) {
-      throw new Error("Organization ID is required");
-    }
-
     // Auto-create org record from Clerk data if it doesn't exist yet
     const existingOrg = await prisma.organization.findUnique({
       where: { id: memberData.orgId },
@@ -35,7 +32,7 @@ class MemberService {
         memberData.orgId,
       );
       if (existingMember) {
-        throw new Error("Member already exists in this organization");
+        throw createError("Member already exists in this organization", 409);
       }
     }
 
@@ -62,12 +59,7 @@ class MemberService {
     return await this._getMemberOrThrow(memberId);
   }
 
-  async getAllMembers(
-    organizationId,
-    page = 1,
-    limit = 10,
-    isActive = null,
-  ) {
+  async getAllMembers(organizationId, page = 1, limit = 10, isActive = null) {
     const result = await memberRepository.findActiveMembers(
       organizationId,
       page,
@@ -90,25 +82,20 @@ class MemberService {
         orgId: member.orgId,
       });
       if (existingMember && existingMember.id !== memberId) {
-        throw new Error("Email is already taken in this organization");
+        throw createError("Email is already taken in this organization", 409);
       }
     }
 
     const dbData = {};
-    if (updateData.firstName !== undefined)
-      dbData.firstName = updateData.firstName;
-    if (updateData.lastName !== undefined)
-      dbData.lastName = updateData.lastName;
+    if (updateData.firstName !== undefined) dbData.firstName = updateData.firstName;
+    if (updateData.lastName !== undefined) dbData.lastName = updateData.lastName;
     if (updateData.email !== undefined) dbData.email = updateData.email;
     if (updateData.phone !== undefined) dbData.phone = updateData.phone;
     if (updateData.gender !== undefined) dbData.gender = updateData.gender;
     if (updateData.notes !== undefined) dbData.notes = updateData.notes;
-    if (updateData.isActive !== undefined)
-      dbData.isActive = updateData.isActive;
-    if (updateData.dateOfBirth !== undefined)
-      dbData.dateOfBirth = new Date(updateData.dateOfBirth);
-    if (updateData.joinDate !== undefined)
-      dbData.joinDate = new Date(updateData.joinDate);
+    if (updateData.isActive !== undefined) dbData.isActive = updateData.isActive;
+    if (updateData.dateOfBirth !== undefined) dbData.dateOfBirth = new Date(updateData.dateOfBirth);
+    if (updateData.joinDate !== undefined) dbData.joinDate = new Date(updateData.joinDate);
 
     return await memberRepository.update(memberId, dbData);
   }
@@ -119,18 +106,8 @@ class MemberService {
     return { message: "Member deleted successfully" };
   }
 
-  async searchMembers(
-    organizationId,
-    searchTerm,
-    limit = 10,
-    includeInactive = true,
-  ) {
-    return await memberRepository.searchMembers(
-      organizationId,
-      searchTerm,
-      limit,
-      includeInactive,
-    );
+  async searchMembers(organizationId, searchTerm, limit = 10, includeInactive = true) {
+    return await memberRepository.searchMembers(organizationId, searchTerm, limit, includeInactive);
   }
 
   async getMemberStats(organizationId) {

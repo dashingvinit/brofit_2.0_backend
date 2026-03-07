@@ -98,14 +98,14 @@ class PaymentRepository extends CrudRepository {
   async revenueByMonths(orgId, from, to) {
     const rows = await prisma.$queryRaw`
       SELECT
-        EXTRACT(YEAR  FROM "paidAt")::int AS year,
-        EXTRACT(MONTH FROM "paidAt")::int AS month,
-        COALESCE(SUM(amount), 0)          AS total
-      FROM "Payment"
-      WHERE "orgId" = ${orgId}
+        EXTRACT(YEAR  FROM paid_at)::int AS year,
+        EXTRACT(MONTH FROM paid_at)::int AS month,
+        COALESCE(SUM(amount), 0)         AS total
+      FROM payments
+      WHERE org_id  = ${orgId}
         AND status  = 'paid'
-        AND "paidAt" >= ${from}
-        AND "paidAt" <= ${to}
+        AND paid_at >= ${from}
+        AND paid_at <= ${to}
       GROUP BY year, month
     `;
     const map = new Map();

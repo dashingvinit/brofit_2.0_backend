@@ -23,7 +23,7 @@ class MemberController {
         gender: req.body.gender,
         joinDate: req.body.joinDate || new Date(),
         notes: req.body.notes || null,
-        isActive: req.body.isActive !== undefined ? req.body.isActive : true,
+        isActive: req.body.isActive,
       });
 
       res.status(201).json({

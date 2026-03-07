@@ -2,7 +2,7 @@ const paymentRepository = require("../../../../../shared/repositories/payment.re
 const expenseRepository = require("../repositories/expense.repository");
 const investmentRepository = require("../repositories/investment.repository");
 
-class AnalyticsService {
+class FinancialsAnalyticsService {
   /**
    * Revenue = sum of paid payments in [from, to].
    */
@@ -110,4 +110,4 @@ class AnalyticsService {
   }
 }
 
-module.exports = new AnalyticsService();
+module.exports = new FinancialsAnalyticsService();

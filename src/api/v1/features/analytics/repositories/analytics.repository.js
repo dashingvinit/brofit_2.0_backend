@@ -72,28 +72,28 @@ class AnalyticsRepository {
     const [membershipRows, trainingRows] = await Promise.all([
       prisma.$queryRaw`
         SELECT
-          EXTRACT(YEAR  FROM "paidAt")::int AS year,
-          EXTRACT(MONTH FROM "paidAt")::int AS month,
-          COALESCE(SUM(amount), 0)          AS total
-        FROM "Payment"
-        WHERE "orgId"        = ${orgId}
+          EXTRACT(YEAR  FROM paid_at)::int AS year,
+          EXTRACT(MONTH FROM paid_at)::int AS month,
+          COALESCE(SUM(amount), 0)         AS total
+        FROM payments
+        WHERE org_id        = ${orgId}
           AND status         = 'paid'
-          AND "membershipId" IS NOT NULL
-          AND "paidAt"      >= ${from}
-          AND "paidAt"      <= ${to}
+          AND membership_id IS NOT NULL
+          AND paid_at      >= ${from}
+          AND paid_at      <= ${to}
         GROUP BY year, month
       `,
       prisma.$queryRaw`
         SELECT
-          EXTRACT(YEAR  FROM "paidAt")::int AS year,
-          EXTRACT(MONTH FROM "paidAt")::int AS month,
-          COALESCE(SUM(amount), 0)          AS total
-        FROM "Payment"
-        WHERE "orgId"      = ${orgId}
+          EXTRACT(YEAR  FROM paid_at)::int AS year,
+          EXTRACT(MONTH FROM paid_at)::int AS month,
+          COALESCE(SUM(amount), 0)         AS total
+        FROM payments
+        WHERE org_id      = ${orgId}
           AND status       = 'paid'
-          AND "trainingId" IS NOT NULL
-          AND "paidAt"    >= ${from}
-          AND "paidAt"    <= ${to}
+          AND training_id IS NOT NULL
+          AND paid_at    >= ${from}
+          AND paid_at    <= ${to}
         GROUP BY year, month
       `,
     ]);
@@ -161,13 +161,13 @@ class AnalyticsRepository {
   async getNewMembersByMonths(orgId, from, to) {
     const rows = await prisma.$queryRaw`
       SELECT
-        EXTRACT(YEAR  FROM "joinDate")::int AS year,
-        EXTRACT(MONTH FROM "joinDate")::int AS month,
-        COUNT(*)::int                       AS count
-      FROM "Member"
-      WHERE "orgId"    = ${orgId}
-        AND "joinDate" >= ${from}
-        AND "joinDate" <= ${to}
+        EXTRACT(YEAR  FROM join_date)::int AS year,
+        EXTRACT(MONTH FROM join_date)::int AS month,
+        COUNT(*)::int                      AS count
+      FROM members
+      WHERE org_id    = ${orgId}
+        AND join_date >= ${from}
+        AND join_date <= ${to}
       GROUP BY year, month
     `;
     const map = new Map();

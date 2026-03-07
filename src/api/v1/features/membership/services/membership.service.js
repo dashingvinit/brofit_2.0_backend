@@ -2,6 +2,7 @@ const membershipRepository = require("../repositories/membership.repository");
 const paymentRepository = require("../../../../../shared/repositories/payment.repository");
 const { prisma } = require("../../../../../config/prisma.config");
 const {
+  createError,
   validateMemberExists,
   validatePlanVariant,
   calculateDates,
@@ -11,29 +12,15 @@ const {
 } = require("../../../../../shared/helpers/subscription.helper");
 
 class MembershipService {
-  async _getMembershipOrThrow(
-    membershipId,
-    errorMessage = "Membership not found",
-  ) {
-    const membership =
-      await membershipRepository.findByIdWithDetails(membershipId);
+  async _getMembershipOrThrow(membershipId) {
+    const membership = await membershipRepository.findByIdWithDetails(membershipId);
     if (!membership) {
-      throw new Error(errorMessage);
+      throw createError("Membership not found", 404);
     }
     return membership;
   }
 
   async createMembership(data) {
-    if (!data.orgId) {
-      throw new Error("Organization ID is required");
-    }
-    if (!data.memberId) {
-      throw new Error("Member ID is required");
-    }
-    if (!data.planVariantId) {
-      throw new Error("Plan variant ID is required");
-    }
-
     await validateMemberExists(data.memberId);
     const planVariant = await validatePlanVariant(data.planVariantId, "membership");
 

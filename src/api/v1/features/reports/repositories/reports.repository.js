@@ -191,45 +191,45 @@ class ReportsRepository {
     // Step 1: compute per-member dues totals in SQL, filter to those with dues > 0
     const dueRows = await prisma.$queryRaw(Prisma.sql`
       SELECT
-        m.id            AS "memberId",
-        m."firstName",
-        m."lastName",
+        m.id                AS "memberId",
+        m.first_name        AS "firstName",
+        m.last_name         AS "lastName",
         m.phone,
         m.email,
-        m."isActive",
+        m.is_active         AS "isActive",
         COALESCE(ms_dues.total, 0)  AS "membershipDuesTotal",
         COALESCE(tr_dues.total, 0)  AS "trainingDuesTotal",
         COALESCE(ms_dues.total, 0) + COALESCE(tr_dues.total, 0) AS "totalDue"
-      FROM "Member" m
+      FROM members m
       LEFT JOIN (
-        SELECT ms."memberId",
-               SUM(GREATEST(ms."finalPrice" - COALESCE(p.paid, 0), 0)) AS total
-        FROM "Membership" ms
+        SELECT ms.member_id,
+               SUM(GREATEST(ms.final_price - COALESCE(p.paid, 0), 0)) AS total
+        FROM memberships ms
         LEFT JOIN (
-          SELECT "membershipId", SUM(amount) AS paid
-          FROM "Payment"
+          SELECT membership_id, SUM(amount) AS paid
+          FROM payments
           WHERE status = 'paid'
-          GROUP BY "membershipId"
-        ) p ON p."membershipId" = ms.id
-        WHERE ms."orgId" = ${orgId}
-        GROUP BY ms."memberId"
-        HAVING SUM(GREATEST(ms."finalPrice" - COALESCE(p.paid, 0), 0)) > 0
-      ) ms_dues ON ms_dues."memberId" = m.id
+          GROUP BY membership_id
+        ) p ON p.membership_id = ms.id
+        WHERE ms.org_id = ${orgId}
+        GROUP BY ms.member_id
+        HAVING SUM(GREATEST(ms.final_price - COALESCE(p.paid, 0), 0)) > 0
+      ) ms_dues ON ms_dues.member_id = m.id
       LEFT JOIN (
-        SELECT tr."memberId",
-               SUM(GREATEST(tr."finalPrice" - COALESCE(p.paid, 0), 0)) AS total
-        FROM "Training" tr
+        SELECT tr.member_id,
+               SUM(GREATEST(tr.final_price - COALESCE(p.paid, 0), 0)) AS total
+        FROM trainings tr
         LEFT JOIN (
-          SELECT "trainingId", SUM(amount) AS paid
-          FROM "Payment"
+          SELECT training_id, SUM(amount) AS paid
+          FROM payments
           WHERE status = 'paid'
-          GROUP BY "trainingId"
-        ) p ON p."trainingId" = tr.id
-        WHERE tr."orgId" = ${orgId}
-        GROUP BY tr."memberId"
-        HAVING SUM(GREATEST(tr."finalPrice" - COALESCE(p.paid, 0), 0)) > 0
-      ) tr_dues ON tr_dues."memberId" = m.id
-      WHERE m."orgId" = ${orgId}
+          GROUP BY training_id
+        ) p ON p.training_id = tr.id
+        WHERE tr.org_id = ${orgId}
+        GROUP BY tr.member_id
+        HAVING SUM(GREATEST(tr.final_price - COALESCE(p.paid, 0), 0)) > 0
+      ) tr_dues ON tr_dues.member_id = m.id
+      WHERE m.org_id = ${orgId}
         ${memberFilter}
         AND (COALESCE(ms_dues.total, 0) + COALESCE(tr_dues.total, 0)) > 0
       ORDER BY "totalDue" DESC
@@ -238,18 +238,15 @@ class ReportsRepository {
     const total = dueRows.length;
     const grandTotal = dueRows.reduce((sum, r) => sum + Number(r.totalDue), 0);
     const pageRows = dueRows.slice(skip, skip + limit);
+    const pagination = {
+      page, limit, total,
+      pages: Math.ceil(total / limit),
+      hasNext: page * limit < total,
+      hasPrev: page > 1,
+    };
 
     if (pageRows.length === 0) {
-      return {
-        data: [],
-        summary: { totalMembersWithDues: total, grandTotal },
-        pagination: {
-          page, limit, total,
-          pages: Math.ceil(total / limit),
-          hasNext: page * limit < total,
-          hasPrev: page > 1,
-        },
-      };
+      return { data: [], summary: { totalMembersWithDues: total, grandTotal }, pagination };
     }
 
     // Step 2: fetch detailed dues breakdown only for the current page of members
@@ -338,18 +335,7 @@ class ReportsRepository {
       };
     });
 
-    return {
-      data,
-      summary: { totalMembersWithDues: total, grandTotal },
-      pagination: {
-        page,
-        limit,
-        total,
-        pages: Math.ceil(total / limit),
-        hasNext: page * limit < total,
-        hasPrev: page > 1,
-      },
-    };
+    return { data, summary: { totalMembersWithDues: total, grandTotal }, pagination };
   }
 }
 

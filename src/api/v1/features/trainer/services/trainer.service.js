@@ -1,20 +1,18 @@
 const trainerRepository = require("../repositories/trainer.repository");
+const { createError } = require("../../../../../shared/helpers/subscription.helper");
 
 class TrainerService {
   async _getTrainerOrThrow(trainerId) {
     const trainer = await trainerRepository.get(trainerId);
     if (!trainer) {
-      throw new Error("Trainer not found");
+      throw createError("Trainer not found", 404);
     }
     return trainer;
   }
 
   async createTrainer(data) {
-    if (!data.orgId) {
-      throw new Error("Organization ID is required");
-    }
     if (!data.name || !data.name.trim()) {
-      throw new Error("Trainer name is required");
+      throw createError("Trainer name is required", 400);
     }
 
     return await trainerRepository.create({
@@ -49,11 +47,8 @@ class TrainerService {
   }
 
   async getTrainerWithActiveClients(trainerId) {
-    const trainer = await trainerRepository.findWithActiveClients(trainerId);
-    if (!trainer) {
-      throw new Error("Trainer not found");
-    }
-    return trainer;
+    await this._getTrainerOrThrow(trainerId);
+    return await trainerRepository.findWithActiveClients(trainerId);
   }
 }
 

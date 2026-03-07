@@ -1,11 +1,7 @@
 const express = require("express");
 const planController = require("./controllers/plan.controller");
-const { requireAuth } = require("../member/member.middlewares");
 
 const router = express.Router();
-
-// All routes require authentication
-router.use(requireAuth());
 
 // ============================================
 // PLAN TYPE ROUTES

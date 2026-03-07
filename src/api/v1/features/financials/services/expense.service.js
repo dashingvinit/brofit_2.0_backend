@@ -1,4 +1,5 @@
 const expenseRepository = require("../repositories/expense.repository");
+const { createError } = require("../../../../../shared/helpers/subscription.helper");
 
 class ExpenseService {
   async createExpense(orgId, { amount, category, description, date }) {
@@ -14,21 +15,17 @@ class ExpenseService {
   async getExpenses(orgId, { month } = {}) {
     let from, to;
     if (month) {
-      // month = "YYYY-MM"
       const [year, mon] = month.split("-").map(Number);
       from = new Date(year, mon - 1, 1);
-      to = new Date(year, mon, 0); // last day of month
+      to = new Date(year, mon, 0);
     }
     return expenseRepository.findMany(orgId, { from, to });
   }
 
   async updateExpense(id, orgId, data) {
     const existing = await expenseRepository.findOne(id, orgId);
-    if (!existing) {
-      const err = new Error("Expense not found");
-      err.status = 404;
-      throw err;
-    }
+    if (!existing) throw createError("Expense not found", 404);
+
     const updates = {};
     if (data.amount !== undefined) updates.amount = parseFloat(data.amount);
     if (data.category !== undefined) updates.category = data.category;
@@ -40,11 +37,7 @@ class ExpenseService {
 
   async deleteExpense(id, orgId) {
     const existing = await expenseRepository.findOne(id, orgId);
-    if (!existing) {
-      const err = new Error("Expense not found");
-      err.status = 404;
-      throw err;
-    }
+    if (!existing) throw createError("Expense not found", 404);
     await expenseRepository.delete(id, orgId);
   }
 }
