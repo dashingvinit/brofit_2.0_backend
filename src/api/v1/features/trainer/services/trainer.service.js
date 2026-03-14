@@ -14,10 +14,14 @@ class TrainerService {
     if (!data.name || !data.name.trim()) {
       throw createError("Trainer name is required", 400);
     }
+    if (data.splitPercent !== undefined && (data.splitPercent < 0 || data.splitPercent > 100)) {
+      throw createError("Split percent must be between 0 and 100", 400);
+    }
 
     return await trainerRepository.create({
       orgId: data.orgId,
       name: data.name.trim(),
+      ...(data.splitPercent !== undefined && { splitPercent: data.splitPercent }),
     });
   }
 
@@ -35,6 +39,12 @@ class TrainerService {
     const dbData = {};
     if (updateData.name !== undefined) dbData.name = updateData.name.trim();
     if (updateData.isActive !== undefined) dbData.isActive = updateData.isActive;
+    if (updateData.splitPercent !== undefined) {
+      if (updateData.splitPercent < 0 || updateData.splitPercent > 100) {
+        throw createError("Split percent must be between 0 and 100", 400);
+      }
+      dbData.splitPercent = updateData.splitPercent;
+    }
 
     await trainerRepository.update(trainerId, dbData);
     return await trainerRepository.get(trainerId);

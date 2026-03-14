@@ -1,11 +1,13 @@
 const express = require("express");
 const reportsController = require("./controllers/reports.controller");
+const requireInternalSecret = require("../../../../shared/middlewares/requireInternalSecret");
 
 const router = express.Router();
 
 // POST /api/v1/reports/expire-subscriptions
-// Expires stale memberships/trainings and deactivates members with no active subs
-router.post("/expire-subscriptions", reportsController.expireSubscriptions);
+// Expires stale memberships/trainings and deactivates members with no active subs.
+// Protected: requires x-cron-secret header matching CRON_SECRET env var.
+router.post("/expire-subscriptions", requireInternalSecret, reportsController.expireSubscriptions);
 
 // GET /api/v1/reports/inactive-candidates
 // Members marked active but with no active memberships or trainings

@@ -46,6 +46,8 @@ class MembershipController {
       const filters = {};
       if (req.query.status) filters.status = req.query.status;
       if (req.query.memberId) filters.memberId = req.query.memberId;
+      if (req.query.createdFrom) filters.createdFrom = req.query.createdFrom;
+      if (req.query.createdTo) filters.createdTo = req.query.createdTo;
 
       const result = await membershipService.getAllMemberships(
         orgId,

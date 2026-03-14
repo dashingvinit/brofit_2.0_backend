@@ -67,36 +67,138 @@ class ReportsRepository {
 
   /**
    * Bulk-expire memberships where endDate has passed and status is still "active".
-   * Returns the count of updated records.
+   * Returns the expired records (id, memberId, planVariantId, endDate, autoRenew, notes).
    */
   async expireStaleMemberships(orgId) {
-    const now = new Date();
-    const result = await prisma.membership.updateMany({
-      where: {
-        orgId,
-        status: "active",
-        endDate: { lt: now },
-      },
-      data: { status: "expired" },
+    const endOfYesterday = new Date();
+    endOfYesterday.setDate(endOfYesterday.getDate() - 1);
+    endOfYesterday.setHours(23, 59, 59, 999);
+
+    const stale = await prisma.membership.findMany({
+      where: { orgId, status: "active", endDate: { lt: endOfYesterday } },
+      select: { id: true, memberId: true, planVariantId: true, endDate: true, autoRenew: true, notes: true },
     });
-    return result.count;
+
+    if (stale.length > 0) {
+      await prisma.membership.updateMany({
+        where: { id: { in: stale.map((m) => m.id) } },
+        data: { status: "expired" },
+      });
+    }
+
+    return stale;
   }
 
   /**
    * Bulk-expire trainings where endDate has passed and status is still "active".
-   * Returns the count of updated records.
+   * Returns the expired records (id, memberId, planVariantId, trainerId, endDate, autoRenew, notes).
    */
   async expireStaleTrainings(orgId) {
-    const now = new Date();
-    const result = await prisma.training.updateMany({
-      where: {
-        orgId,
-        status: "active",
-        endDate: { lt: now },
-      },
-      data: { status: "expired" },
+    const endOfYesterday = new Date();
+    endOfYesterday.setDate(endOfYesterday.getDate() - 1);
+    endOfYesterday.setHours(23, 59, 59, 999);
+
+    const stale = await prisma.training.findMany({
+      where: { orgId, status: "active", endDate: { lt: endOfYesterday } },
+      select: { id: true, memberId: true, planVariantId: true, trainerId: true, endDate: true, autoRenew: true, notes: true },
     });
-    return result.count;
+
+    if (stale.length > 0) {
+      await prisma.training.updateMany({
+        where: { id: { in: stale.map((t) => t.id) } },
+        data: { status: "expired" },
+      });
+    }
+
+    return stale;
+  }
+
+  /**
+   * Auto-renew expired memberships and trainings that have autoRenew=true.
+   * New subscription starts from the old endDate, priced at the current plan variant price.
+   * No payment is recorded — dues will appear for the gym to collect.
+   * Returns counts of renewed memberships and trainings.
+   */
+  async renewAutoRenewSubscriptions(orgId, expiredMemberships, expiredTrainings) {
+    const toRenewMemberships = expiredMemberships.filter((m) => m.autoRenew);
+    const toRenewTrainings = expiredTrainings.filter((t) => t.autoRenew);
+
+    if (toRenewMemberships.length === 0 && toRenewTrainings.length === 0) {
+      return { renewedMemberships: 0, renewedTrainings: 0 };
+    }
+
+    // Fetch all unique plan variants needed
+    const allVariantIds = [
+      ...new Set([
+        ...toRenewMemberships.map((m) => m.planVariantId),
+        ...toRenewTrainings.map((t) => t.planVariantId),
+      ]),
+    ];
+    const variants = await prisma.planVariant.findMany({
+      where: { id: { in: allVariantIds }, isActive: true },
+      select: { id: true, price: true, durationDays: true },
+    });
+    const variantMap = Object.fromEntries(variants.map((v) => [v.id, v]));
+
+    let renewedMemberships = 0;
+    let renewedTrainings = 0;
+
+    await prisma.$transaction(async (tx) => {
+      for (const m of toRenewMemberships) {
+        const variant = variantMap[m.planVariantId];
+        if (!variant) continue; // skip if plan variant was deactivated
+
+        const startDate = new Date(m.endDate);
+        const endDate = new Date(startDate);
+        endDate.setDate(endDate.getDate() + variant.durationDays);
+
+        await tx.membership.create({
+          data: {
+            orgId,
+            memberId: m.memberId,
+            planVariantId: m.planVariantId,
+            startDate,
+            endDate,
+            status: "active",
+            priceAtPurchase: variant.price,
+            discountAmount: 0,
+            finalPrice: variant.price,
+            autoRenew: true,
+            notes: m.notes || null,
+          },
+        });
+        renewedMemberships++;
+      }
+
+      for (const t of toRenewTrainings) {
+        const variant = variantMap[t.planVariantId];
+        if (!variant) continue;
+
+        const startDate = new Date(t.endDate);
+        const endDate = new Date(startDate);
+        endDate.setDate(endDate.getDate() + variant.durationDays);
+
+        await tx.training.create({
+          data: {
+            orgId,
+            memberId: t.memberId,
+            planVariantId: t.planVariantId,
+            trainerId: t.trainerId || null,
+            startDate,
+            endDate,
+            status: "active",
+            priceAtPurchase: variant.price,
+            discountAmount: 0,
+            finalPrice: variant.price,
+            autoRenew: true,
+            notes: t.notes || null,
+          },
+        });
+        renewedTrainings++;
+      }
+    });
+
+    return { renewedMemberships, renewedTrainings };
   }
 
   /**

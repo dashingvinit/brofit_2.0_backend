@@ -24,6 +24,12 @@ class MembershipRepository extends CrudRepository {
     if (filters.status) where.status = filters.status;
     if (filters.memberId) where.memberId = filters.memberId;
 
+    if (filters.createdFrom || filters.createdTo) {
+      where.createdAt = {};
+      if (filters.createdFrom) where.createdAt.gte = new Date(filters.createdFrom);
+      if (filters.createdTo) where.createdAt.lte = new Date(filters.createdTo);
+    }
+
     return await this.findWithPagination(where, {
       page,
       limit,
@@ -65,8 +71,10 @@ class MembershipRepository extends CrudRepository {
 
   async findExpiringMemberships(orgId, daysAhead = 7) {
     const now = new Date();
+    now.setHours(0, 0, 0, 0);
     const futureDate = new Date();
     futureDate.setDate(futureDate.getDate() + daysAhead);
+    futureDate.setHours(23, 59, 59, 999);
 
     return await this.find(
       {

@@ -23,6 +23,8 @@ class MemberRepository extends CrudRepository {
     page = 1,
     limit = 10,
     isActive = null,
+    joinedFrom = null,
+    joinedTo = null,
   ) {
     const whereClause = {
       orgId: organizationId,
@@ -31,6 +33,12 @@ class MemberRepository extends CrudRepository {
     // null → all members, true → active only, false → inactive only
     if (isActive !== null) {
       whereClause.isActive = isActive;
+    }
+
+    if (joinedFrom || joinedTo) {
+      whereClause.joinDate = {};
+      if (joinedFrom) whereClause.joinDate.gte = new Date(joinedFrom);
+      if (joinedTo) whereClause.joinDate.lte = new Date(joinedTo);
     }
 
     return await this.findWithPagination(whereClause, {
