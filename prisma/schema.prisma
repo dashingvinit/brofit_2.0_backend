@@ -14,14 +14,15 @@ model Organization {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  members         Member[]
-  planTypes       PlanType[]
-  trainers        Trainer[]
-  dailySnapshots  DailyActivitySnapshot[]
-  expenses        Expense[]
-  investments     Investment[]
-  attendances     Attendance[]
-  trainerPayouts  TrainerPayout[]
+  members               Member[]
+  planTypes             PlanType[]
+  trainers              Trainer[]
+  dailySnapshots        DailyActivitySnapshot[]
+  expenses              Expense[]
+  investments           Investment[]
+  attendances           Attendance[]
+  trainerPayouts        TrainerPayout[]
+  notificationSettings  OrgNotificationSettings?
 
   @@map("organizations")
 }
@@ -333,4 +334,21 @@ model Investment {
 
   @@index([orgId])
   @@map("investments")
+}
+
+// ─── Notifications ─────────────────────────────────────────────────────────────
+
+model OrgNotificationSettings {
+  id                      String   @id @default(uuid())
+  orgId                   String   @unique @map("org_id")
+  ownerWhatsapp           String?  @map("owner_whatsapp")
+  digestEnabled           Boolean  @default(false) @map("digest_enabled")
+  memberReminderEnabled   Boolean  @default(false) @map("member_reminder_enabled")
+  reminderDaysBefore      Int      @default(3) @map("reminder_days_before")
+  createdAt               DateTime @default(now()) @map("created_at")
+  updatedAt               DateTime @updatedAt @map("updated_at")
+
+  org Organization @relation(fields: [orgId], references: [id])
+
+  @@map("org_notification_settings")
 }

@@ -8,6 +8,7 @@ const reportRoutes = require("./features/reports/reports.routes");
 const financialsRoutes = require("./features/financials/financials.routes");
 const analyticsRoutes = require("./features/analytics/analytics.routes");
 const attendanceRoutes = require("./features/attendance/attendance.routes");
+const notificationsRoutes = require("./features/notifications/notifications.routes");
 
 const router = express.Router();
 
@@ -30,5 +31,6 @@ router.use("/reports", reportRoutes);
 router.use("/financials", financialsRoutes);
 router.use("/analytics", analyticsRoutes);
 router.use("/attendance", attendanceRoutes);
+router.use("/notifications", notificationsRoutes);
 
 module.exports = router;
