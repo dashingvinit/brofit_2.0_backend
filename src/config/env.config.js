@@ -52,6 +52,13 @@ const config = {
     mobileClientUrl: process.env.MOBILE_CLIENT_URL || 'http://localhost:19006',
   },
 
+  // Twilio — WhatsApp notifications
+  twilio: {
+    accountSid: process.env.TWILIO_ACCOUNT_SID,
+    authToken: process.env.TWILIO_AUTH_TOKEN,
+    whatsappFrom: process.env.TWILIO_WHATSAPP_FROM || 'whatsapp:+14155238886', // Twilio sandbox default
+  },
+
   // Helper methods
   isDevelopment: () => config.server.env === 'development',
   isProduction: () => config.server.env === 'production',
