@@ -10,6 +10,7 @@ class TrainerController {
       const trainer = await trainerService.createTrainer({
         orgId,
         name: req.body.name,
+        splitPercent: req.body.splitPercent,
       });
 
       res.status(201).json({

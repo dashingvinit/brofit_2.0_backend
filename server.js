@@ -11,7 +11,15 @@ const app = express();
 
 app.use(
   cors({
-    origin: [config.cors.clientUrl, config.cors.mobileClientUrl],
+    origin: (origin, callback) => {
+      // Allow mobile apps (no origin header) and whitelisted web origins
+      const allowed = [config.cors.clientUrl, config.cors.mobileClientUrl];
+      if (!origin || allowed.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     credentials: true,
   }),
 );

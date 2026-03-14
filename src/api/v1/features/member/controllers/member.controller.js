@@ -50,12 +50,16 @@ class MemberController {
           : req.query.isActive === "false"
             ? false
             : null;
+      const joinedFrom = req.query.joinedFrom || null;
+      const joinedTo = req.query.joinedTo || null;
 
       const result = await memberService.getAllMembers(
         organizationId,
         page,
         limit,
         isActive,
+        joinedFrom,
+        joinedTo,
       );
 
       res.status(200).json({

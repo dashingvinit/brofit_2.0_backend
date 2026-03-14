@@ -7,6 +7,7 @@ const trainerRoutes = require("./features/trainer/trainer.routes");
 const reportRoutes = require("./features/reports/reports.routes");
 const financialsRoutes = require("./features/financials/financials.routes");
 const analyticsRoutes = require("./features/analytics/analytics.routes");
+const attendanceRoutes = require("./features/attendance/attendance.routes");
 
 const router = express.Router();
 
@@ -28,5 +29,6 @@ router.use("/trainers", trainerRoutes);
 router.use("/reports", reportRoutes);
 router.use("/financials", financialsRoutes);
 router.use("/analytics", analyticsRoutes);
+router.use("/attendance", attendanceRoutes);
 
 module.exports = router;

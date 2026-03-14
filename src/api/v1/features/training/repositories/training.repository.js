@@ -69,8 +69,10 @@ class TrainingRepository extends CrudRepository {
 
   async findExpiringTrainings(orgId, daysAhead = 7) {
     const now = new Date();
+    now.setHours(0, 0, 0, 0);
     const futureDate = new Date();
     futureDate.setDate(futureDate.getDate() + daysAhead);
+    futureDate.setHours(23, 59, 59, 999);
 
     return await this.find(
       {

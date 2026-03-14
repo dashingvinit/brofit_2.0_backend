@@ -14,12 +14,14 @@ model Organization {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  members        Member[]
-  planTypes      PlanType[]
-  trainers       Trainer[]
-  dailySnapshots DailyActivitySnapshot[]
-  expenses       Expense[]
-  investments    Investment[]
+  members         Member[]
+  planTypes       PlanType[]
+  trainers        Trainer[]
+  dailySnapshots  DailyActivitySnapshot[]
+  expenses        Expense[]
+  investments     Investment[]
+  attendances     Attendance[]
+  trainerPayouts  TrainerPayout[]
 
   @@map("organizations")
 }
@@ -44,6 +46,7 @@ model Member {
   memberships   Membership[]
   trainings     Training[]
   payments      Payment[]
+  attendances   Attendance[]
 
   @@index([orgId])
   @@index([phone])
@@ -165,10 +168,11 @@ model Training {
   createdAt       DateTime       @default(now()) @map("created_at")
   updatedAt       DateTime       @updatedAt @map("updated_at")
 
-  member      Member      @relation(fields: [memberId], references: [id])
-  planVariant PlanVariant @relation(fields: [planVariantId], references: [id])
-  trainer     Trainer     @relation(fields: [trainerId], references: [id])
+  member      Member          @relation(fields: [memberId], references: [id])
+  planVariant PlanVariant     @relation(fields: [planVariantId], references: [id])
+  trainer     Trainer         @relation(fields: [trainerId], references: [id])
   payments    Payment[]
+  payouts     TrainerPayout[]
 
   @@index([memberId])
   @@index([status])
@@ -178,19 +182,45 @@ model Training {
 }
 
 model Trainer {
-  id        String     @id @default(uuid())
-  orgId     String     @map("org_id")
-  name      String
-  isActive  Boolean    @default(true) @map("is_active")
-  createdAt DateTime   @default(now()) @map("created_at")
-  updatedAt DateTime   @updatedAt @map("updated_at")
+  id           String  @id @default(uuid())
+  orgId        String  @map("org_id")
+  name         String
+  splitPercent Float   @default(60) @map("split_percent")
+  isActive     Boolean @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
-  organization Organization @relation(fields: [orgId], references: [id])
+  organization Organization   @relation(fields: [orgId], references: [id])
   trainings    Training[]
+  payouts      TrainerPayout[]
 
   @@index([orgId])
   @@index([isActive])
   @@map("trainers")
+}
+
+model TrainerPayout {
+  id           String   @id @default(uuid())
+  orgId        String   @map("org_id")
+  trainerId    String   @map("trainer_id")
+  trainingId   String   @map("training_id")
+  month        Int
+  year         Int
+  revenueBase  Float    @map("revenue_base")
+  splitPercent Float    @default(60) @map("split_percent")
+  amount       Float
+  notes        String?
+  paidAt       DateTime @default(now()) @map("paid_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  trainer  Trainer      @relation(fields: [trainerId], references: [id])
+  training Training     @relation(fields: [trainingId], references: [id])
+  org      Organization @relation(fields: [orgId], references: [id])
+
+  @@unique([trainingId, month, year])
+  @@index([trainerId])
+  @@index([orgId])
+  @@map("trainer_payouts")
 }
 
 model Payment {
@@ -234,6 +264,30 @@ model DailyActivitySnapshot {
   @@unique([orgId, snapshotDate])
   @@index([orgId])
   @@map("daily_activity_snapshots")
+}
+
+// ─── Attendance ───────────────────────────────────────────────────────────────
+
+model Attendance {
+  id         String    @id @default(uuid())
+  orgId      String    @map("org_id")
+  memberId   String    @map("member_id")
+  entryTime  DateTime  @map("entry_time")
+  exitTime   DateTime? @map("exit_time")
+  date       DateTime  @db.Date
+  notes      String?
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  member     Member       @relation(fields: [memberId], references: [id])
+  org        Organization @relation(fields: [orgId], references: [id])
+
+  @@index([orgId])
+  @@index([memberId])
+  @@index([date])
+  @@index([orgId, date])
+  @@index([orgId, exitTime])
+  @@map("attendances")
 }
 
 // ─── Financials ───────────────────────────────────────────────────────────────

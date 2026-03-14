@@ -6,22 +6,21 @@ class ReportsService {
    * who have no remaining active subscriptions.
    */
   async expireSubscriptions(orgId) {
-    // 1. Bulk-expire stale memberships and trainings
+    // Bulk-expire stale memberships and trainings
     const [expiredMemberships, expiredTrainings] = await Promise.all([
       reportsRepository.expireStaleMemberships(orgId),
       reportsRepository.expireStaleTrainings(orgId),
     ]);
 
-    // 2. Find and deactivate members with no active subs
-    const memberIds =
-      await reportsRepository.findMembersWithNoActiveSubs(orgId);
-    const deactivatedMembers =
-      await reportsRepository.deactivateMembers(memberIds);
+    // Auto-renew subscriptions that have autoRenew=true
+    const { renewedMemberships, renewedTrainings } =
+      await reportsRepository.renewAutoRenewSubscriptions(orgId, expiredMemberships, expiredTrainings);
 
     return {
-      expiredMemberships,
-      expiredTrainings,
-      deactivatedMembers,
+      expiredMemberships: expiredMemberships.length,
+      expiredTrainings: expiredTrainings.length,
+      renewedMemberships,
+      renewedTrainings,
     };
   }
 

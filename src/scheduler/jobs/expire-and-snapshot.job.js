@@ -26,7 +26,7 @@ const run = async () => {
       await reportsService.takeActivitySnapshot(orgId, expireResult);
 
       console.log(
-        `[Cron] ✓ ${orgId} — expired memberships: ${expireResult.expiredMemberships}, trainings: ${expireResult.expiredTrainings}, deactivated members: ${expireResult.deactivatedMembers}`,
+        `[Cron] ✓ ${orgId} — expired memberships: ${expireResult.expiredMemberships}, trainings: ${expireResult.expiredTrainings}, renewed memberships: ${expireResult.renewedMemberships}, renewed trainings: ${expireResult.renewedTrainings}, deactivated members: ${expireResult.deactivatedMembers}`,
       );
     } catch (err) {
       console.error(`[Cron] ✗ Org ${orgId} failed:`, err.message);
