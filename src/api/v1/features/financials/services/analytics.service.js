@@ -98,15 +98,15 @@ class FinancialsAnalyticsService {
       expenseRepository.sumByMonths(orgId, from, to),
     ]);
 
-    return Array.from({ length: months }, (_, i) => {
-      const d = new Date(now.getFullYear(), now.getMonth() - (months - 1 - i), 1);
-      const year = d.getFullYear();
-      const month = d.getMonth() + 1; // 1-indexed
-      const key = `${year}-${month}`;
-      const revenue = revenueMap.get(key) || 0;
-      const expenses = expenseMap.get(key) || 0;
-      return { year, month, revenue, expenses, netProfit: revenue - expenses };
-    });
+    const allKeys = new Set([...revenueMap.keys(), ...expenseMap.keys()]);
+    return [...allKeys]
+      .map((key) => {
+        const [year, month] = key.split("-").map(Number);
+        const revenue = revenueMap.get(key) || 0;
+        const expenses = expenseMap.get(key) || 0;
+        return { year, month, revenue, expenses, netProfit: revenue - expenses };
+      })
+      .sort((a, b) => a.year - b.year || a.month - b.month);
   }
 }
 
