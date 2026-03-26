@@ -16,6 +16,7 @@ class MembershipController {
         planVariantId: req.body.planVariantId,
         startDate: req.body.startDate,
         discountAmount: req.body.discountAmount,
+        offerId: req.body.offerId,
         autoRenew: req.body.autoRenew,
         notes: req.body.notes,
         paymentAmount: req.body.paymentAmount,
@@ -165,7 +166,8 @@ class MembershipController {
   freezeMembership = async (req, res, next) => {
     try {
       const { id } = req.params;
-      const membership = await membershipService.freezeMembership(id);
+      const { reason, freezeStartDate, freezeEndDate } = req.body || {};
+      const membership = await membershipService.freezeMembership(id, { reason, freezeStartDate, freezeEndDate });
 
       res.status(200).json({
         success: true,
@@ -244,6 +246,7 @@ class MembershipController {
         status: req.body.status,
         reference: req.body.reference,
         notes: req.body.notes,
+        paidAt: req.body.paidAt,
       };
 
       const payment = await paymentService.recordPayment(data);

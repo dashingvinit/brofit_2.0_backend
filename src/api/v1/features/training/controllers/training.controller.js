@@ -18,6 +18,7 @@ class TrainingController {
         trainerId: req.body.trainerId,
         startDate: req.body.startDate,
         discountAmount: req.body.discountAmount,
+        offerId: req.body.offerId,
         autoRenew: req.body.autoRenew,
         notes: req.body.notes,
         paymentAmount: req.body.paymentAmount,
@@ -245,6 +246,7 @@ class TrainingController {
         status: req.body.status,
         reference: req.body.reference,
         notes: req.body.notes,
+        paidAt: req.body.paidAt,
       };
 
       const payment = await paymentService.recordPayment(data, {

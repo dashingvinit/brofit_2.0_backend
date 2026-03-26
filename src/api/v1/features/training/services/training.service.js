@@ -11,6 +11,19 @@ const {
   calculateDues,
 } = require("../../../../../shared/helpers/subscription.helper");
 
+async function resolveOfferDiscount(offerId, orgId, planVariantPrice) {
+  if (!offerId) return null;
+  const offer = await prisma.offer.findFirst({
+    where: { id: offerId, orgId, isActive: true },
+  });
+  if (!offer) throw createError("Offer not found or inactive", 400);
+  if (!["discount", "promo"].includes(offer.type)) return null;
+  if (offer.discountType === "percentage") {
+    return (planVariantPrice * offer.discountValue) / 100;
+  }
+  return offer.discountValue;
+}
+
 class TrainingService {
   async _getTrainingOrThrow(trainingId) {
     const training = await trainingRepository.findByIdWithDetails(trainingId);
@@ -28,9 +41,13 @@ class TrainingService {
       data.startDate,
       planVariant.durationDays,
     );
+
+    const offerDiscount = await resolveOfferDiscount(data.offerId, data.orgId, planVariant.price);
+    const effectiveDiscount = offerDiscount !== null ? offerDiscount : (data.discountAmount || 0);
+
     const { priceAtPurchase, discountAmount, finalPrice } = calculatePricing(
       planVariant.price,
-      data.discountAmount,
+      effectiveDiscount,
     );
 
     const result = await prisma.$transaction(async (tx) => {
@@ -48,6 +65,7 @@ class TrainingService {
           finalPrice,
           autoRenew: data.autoRenew || false,
           notes: data.notes || null,
+          offerId: data.offerId || null,
         },
         include: {
           member: true,

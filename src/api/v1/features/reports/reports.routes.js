@@ -9,6 +9,11 @@ const router = express.Router();
 // Protected: requires x-cron-secret header matching CRON_SECRET env var.
 router.post("/expire-subscriptions", requireInternalSecret, reportsController.expireSubscriptions);
 
+// POST /api/v1/reports/sync-expirations
+// Manually trigger expiration for the authenticated org (e.g. from admin UI).
+// Protected by Clerk auth (requireOrgId in controller).
+router.post("/sync-expirations", reportsController.syncExpirations);
+
 // GET /api/v1/reports/inactive-candidates
 // Members marked active but with no active memberships or trainings
 router.get("/inactive-candidates", reportsController.getInactiveCandidates);

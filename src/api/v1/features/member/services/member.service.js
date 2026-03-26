@@ -4,7 +4,7 @@ const { createError } = require("../../../../../shared/helpers/subscription.help
 
 class MemberService {
   async _getMemberOrThrow(memberId) {
-    const member = await memberRepository.get(memberId);
+    const member = await memberRepository.findByIdWithReferral(memberId);
     if (!member) {
       throw createError("Member not found", 404);
     }
@@ -36,6 +36,13 @@ class MemberService {
       }
     }
 
+    if (memberData.referredById) {
+      const referrer = await memberRepository.get(memberData.referredById);
+      if (!referrer || referrer.orgId !== memberData.orgId) {
+        throw createError("Referring member not found in this organization", 400);
+      }
+    }
+
     return await memberRepository.create({
       orgId: memberData.orgId,
       clerkUserId: memberData.clerkUserId || null,
@@ -52,6 +59,7 @@ class MemberService {
         : new Date(),
       notes: memberData.notes || null,
       isActive: memberData.isActive ?? true,
+      referredById: memberData.referredById || null,
     });
   }
 
@@ -98,6 +106,18 @@ class MemberService {
     if (updateData.isActive !== undefined) dbData.isActive = updateData.isActive;
     if (updateData.dateOfBirth !== undefined) dbData.dateOfBirth = new Date(updateData.dateOfBirth);
     if (updateData.joinDate !== undefined) dbData.joinDate = new Date(updateData.joinDate);
+    if (updateData.referredById !== undefined) {
+      if (updateData.referredById === memberId) {
+        throw createError("A member cannot refer themselves", 400);
+      }
+      if (updateData.referredById) {
+        const referrer = await memberRepository.get(updateData.referredById);
+        if (!referrer || referrer.orgId !== member.orgId) {
+          throw createError("Referring member not found in this organization", 400);
+        }
+      }
+      dbData.referredById = updateData.referredById || null;
+    }
 
     return await memberRepository.update(memberId, dbData);
   }

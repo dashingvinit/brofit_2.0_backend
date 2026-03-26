@@ -7,6 +7,17 @@ class MemberRepository extends CrudRepository {
     super(prisma.member);
   }
 
+  async findByIdWithReferral(memberId) {
+    return await this.model.findUnique({
+      where: { id: memberId },
+      include: {
+        referredBy: {
+          select: { id: true, firstName: true, lastName: true },
+        },
+      },
+    });
+  }
+
   async findByClerkId(clerkUserId) {
     return await this.findOne({ clerkUserId });
   }
@@ -79,14 +90,28 @@ class MemberRepository extends CrudRepository {
     limit = 10,
     includeInactive = true,
   ) {
+    const baseConditions = [
+      { firstName: { contains: searchTerm, mode: "insensitive" } },
+      { lastName: { contains: searchTerm, mode: "insensitive" } },
+      { email: { contains: searchTerm, mode: "insensitive" } },
+      { phone: { contains: searchTerm } },
+      { id: { contains: searchTerm, mode: "insensitive" } },
+      {
+        memberships: {
+          some: {
+            planVariant: {
+              planType: {
+                name: { contains: searchTerm, mode: "insensitive" },
+              },
+            },
+          },
+        },
+      },
+    ];
+
     const whereClause = {
       orgId: organizationId,
-      OR: [
-        { firstName: { contains: searchTerm, mode: "insensitive" } },
-        { lastName: { contains: searchTerm, mode: "insensitive" } },
-        { email: { contains: searchTerm, mode: "insensitive" } },
-        { phone: { contains: searchTerm } },
-      ],
+      OR: baseConditions,
     };
 
     // Only filter by isActive if includeInactive is false

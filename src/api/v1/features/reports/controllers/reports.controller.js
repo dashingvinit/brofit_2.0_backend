@@ -71,6 +71,23 @@ class ReportsController {
     }
   };
 
+  syncExpirations = async (req, res, next) => {
+    try {
+      const orgId = requireOrgId(req, res);
+      if (!orgId) return;
+
+      const result = await reportsService.expireSubscriptions(orgId);
+
+      res.status(200).json({
+        success: true,
+        message: "Expirations synced successfully",
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
   getActivityTrend = async (req, res, next) => {
     try {
       const orgId = requireOrgId(req, res);

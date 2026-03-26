@@ -46,7 +46,7 @@ class PaymentService {
       status: resolvedStatus,
       reference: data.reference || null,
       notes: data.notes || null,
-      paidAt: resolvedStatus === "paid" ? new Date() : null,
+      paidAt: resolvedStatus === "paid" ? (data.paidAt ? new Date(data.paidAt) : new Date()) : null,
     });
 
     return payment;

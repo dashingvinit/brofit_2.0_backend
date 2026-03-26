@@ -23,6 +23,7 @@ model Organization {
   attendances           Attendance[]
   trainerPayouts        TrainerPayout[]
   notificationSettings  OrgNotificationSettings?
+  offers                Offer[]
 
   @@map("organizations")
 }
@@ -40,6 +41,7 @@ model Member {
   joinDate      DateTime  @map("join_date")
   notes         String?
   isActive      Boolean   @default(true) @map("is_active")
+  referredById  String?   @map("referred_by_id")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
@@ -48,6 +50,8 @@ model Member {
   trainings     Training[]
   payments      Payment[]
   attendances   Attendance[]
+  referredBy    Member?      @relation("MemberReferrals", fields: [referredById], references: [id])
+  referrals     Member[]     @relation("MemberReferrals")
 
   @@index([orgId])
   @@index([phone])
@@ -139,11 +143,17 @@ model Membership {
   finalPrice      Float            @map("final_price")
   autoRenew       Boolean          @default(false) @map("auto_renew")
   notes           String?
+  freezeReason    String?          @map("freeze_reason")
+  freezeStartDate DateTime?        @map("freeze_start_date")
+  freezeEndDate   DateTime?        @map("freeze_end_date")
   createdAt       DateTime         @default(now()) @map("created_at")
   updatedAt       DateTime         @updatedAt @map("updated_at")
 
+  offerId         String?  @map("offer_id")
+
   member      Member      @relation(fields: [memberId], references: [id])
   planVariant PlanVariant @relation(fields: [planVariantId], references: [id])
+  offer       Offer?      @relation(fields: [offerId], references: [id])
   payments    Payment[]
 
   @@index([memberId])
@@ -169,9 +179,12 @@ model Training {
   createdAt       DateTime       @default(now()) @map("created_at")
   updatedAt       DateTime       @updatedAt @map("updated_at")
 
+  offerId         String?  @map("offer_id")
+
   member      Member          @relation(fields: [memberId], references: [id])
   planVariant PlanVariant     @relation(fields: [planVariantId], references: [id])
   trainer     Trainer         @relation(fields: [trainerId], references: [id])
+  offer       Offer?          @relation(fields: [offerId], references: [id])
   payments    Payment[]
   payouts     TrainerPayout[]
 
@@ -334,6 +347,46 @@ model Investment {
 
   @@index([orgId])
   @@map("investments")
+}
+
+// ─── Offers ───────────────────────────────────────────────────────────────────
+
+enum OfferType {
+  event
+  referral
+  discount
+  promo
+}
+
+enum DiscountType {
+  flat
+  percentage
+}
+
+model Offer {
+  id            String        @id @default(uuid())
+  orgId         String        @map("org_id")
+  type          OfferType
+  title         String
+  description   String?
+  startDate     DateTime?     @map("start_date")
+  endDate       DateTime?     @map("end_date")
+  isActive      Boolean       @default(true) @map("is_active")
+  discountType  DiscountType? @map("discount_type")
+  discountValue Float?        @map("discount_value")
+  code          String?
+  rewardAmount  Float?        @map("reward_amount")
+  createdAt     DateTime      @default(now()) @map("created_at")
+  updatedAt     DateTime      @updatedAt @map("updated_at")
+
+  org         Organization @relation(fields: [orgId], references: [id])
+  memberships Membership[]
+  trainings   Training[]
+
+  @@index([orgId])
+  @@index([type])
+  @@index([isActive])
+  @@map("offers")
 }
 
 // ─── Notifications ─────────────────────────────────────────────────────────────

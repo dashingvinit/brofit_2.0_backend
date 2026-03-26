@@ -11,6 +11,19 @@ const {
   calculateDues,
 } = require("../../../../../shared/helpers/subscription.helper");
 
+async function resolveOfferDiscount(offerId, orgId, planVariantPrice) {
+  if (!offerId) return null;
+  const offer = await prisma.offer.findFirst({
+    where: { id: offerId, orgId, isActive: true },
+  });
+  if (!offer) throw createError("Offer not found or inactive", 400);
+  if (!["discount", "promo"].includes(offer.type)) return null;
+  if (offer.discountType === "percentage") {
+    return (planVariantPrice * offer.discountValue) / 100;
+  }
+  return offer.discountValue;
+}
+
 class MembershipService {
   async _getMembershipOrThrow(membershipId) {
     const membership = await membershipRepository.findByIdWithDetails(membershipId);
@@ -28,9 +41,13 @@ class MembershipService {
       data.startDate,
       planVariant.durationDays,
     );
+
+    const offerDiscount = await resolveOfferDiscount(data.offerId, data.orgId, planVariant.price);
+    const effectiveDiscount = offerDiscount !== null ? offerDiscount : (data.discountAmount || 0);
+
     const { priceAtPurchase, discountAmount, finalPrice } = calculatePricing(
       planVariant.price,
-      data.discountAmount,
+      effectiveDiscount,
     );
 
     const result = await prisma.$transaction(async (tx) => {
@@ -47,6 +64,7 @@ class MembershipService {
           finalPrice,
           autoRenew: data.autoRenew || false,
           notes: data.notes || null,
+          offerId: data.offerId || null,
         },
         include: {
           member: true,
@@ -146,11 +164,16 @@ class MembershipService {
     return await membershipRepository.findByIdWithDetails(membershipId);
   }
 
-  async freezeMembership(membershipId) {
+  async freezeMembership(membershipId, { reason, freezeStartDate, freezeEndDate } = {}) {
     const membership = await this._getMembershipOrThrow(membershipId);
     validateStatusTransition(membership.status, "freeze", "Membership");
 
-    await membershipRepository.update(membershipId, { status: "frozen" });
+    await membershipRepository.update(membershipId, {
+      status: "frozen",
+      freezeReason: reason || null,
+      freezeStartDate: freezeStartDate ? new Date(freezeStartDate) : new Date(),
+      freezeEndDate: freezeEndDate ? new Date(freezeEndDate) : null,
+    });
     return await membershipRepository.findByIdWithDetails(membershipId);
   }
 
@@ -158,7 +181,12 @@ class MembershipService {
     const membership = await this._getMembershipOrThrow(membershipId);
     validateStatusTransition(membership.status, "unfreeze", "Membership");
 
-    await membershipRepository.update(membershipId, { status: "active" });
+    await membershipRepository.update(membershipId, {
+      status: "active",
+      freezeReason: null,
+      freezeStartDate: null,
+      freezeEndDate: null,
+    });
     return await membershipRepository.findByIdWithDetails(membershipId);
   }
 

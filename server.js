@@ -6,6 +6,7 @@ const { testPrismaConnection } = require("./src/config/prisma.config");
 const apiRoutes = require("./src/api");
 const { errorHandler, notFoundHandler } = require("./src/shared/middlewares");
 const { startScheduler } = require("./src/scheduler");
+const expireAndSnapshotJob = require("./src/scheduler/jobs/expire-and-snapshot.job");
 
 const app = express();
 
@@ -47,6 +48,11 @@ const startServer = async () => {
     }
 
     startScheduler();
+
+    // Catch up any expirations missed while the server was down
+    expireAndSnapshotJob.run().catch((err) =>
+      console.error("[Startup] Expire job failed:", err.message),
+    );
 
     const server = app.listen(config.server.port, () => {
       console.log(`\n🚀 Server running on port ${config.server.port}`);

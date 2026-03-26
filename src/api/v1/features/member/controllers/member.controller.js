@@ -24,6 +24,7 @@ class MemberController {
         joinDate: req.body.joinDate || new Date(),
         notes: req.body.notes || null,
         isActive: req.body.isActive,
+        referredById: req.body.referredById || null,
       });
 
       res.status(201).json({
