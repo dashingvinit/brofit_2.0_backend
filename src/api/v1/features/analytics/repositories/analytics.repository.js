@@ -72,28 +72,30 @@ class AnalyticsRepository {
     const [membershipRows, trainingRows] = await Promise.all([
       prisma.$queryRaw`
         SELECT
-          EXTRACT(YEAR  FROM paid_at)::int AS year,
-          EXTRACT(MONTH FROM paid_at)::int AS month,
-          COALESCE(SUM(amount), 0)         AS total
-        FROM payments
-        WHERE org_id        = ${orgId}
-          AND status         = 'paid'
-          AND membership_id IS NOT NULL
-          AND paid_at      >= ${from}
-          AND paid_at      <= ${to}
+          EXTRACT(YEAR  FROM m.start_date)::int AS year,
+          EXTRACT(MONTH FROM m.start_date)::int AS month,
+          COALESCE(SUM(p.amount), 0)            AS total
+        FROM payments p
+        JOIN memberships m ON m.id = p.membership_id
+        WHERE p.org_id        = ${orgId}
+          AND p.status         = 'paid'
+          AND p.membership_id IS NOT NULL
+          AND m.start_date   >= ${from}
+          AND m.start_date   <= ${to}
         GROUP BY year, month
       `,
       prisma.$queryRaw`
         SELECT
-          EXTRACT(YEAR  FROM paid_at)::int AS year,
-          EXTRACT(MONTH FROM paid_at)::int AS month,
-          COALESCE(SUM(amount), 0)         AS total
-        FROM payments
-        WHERE org_id      = ${orgId}
-          AND status       = 'paid'
-          AND training_id IS NOT NULL
-          AND paid_at    >= ${from}
-          AND paid_at    <= ${to}
+          EXTRACT(YEAR  FROM t.start_date)::int AS year,
+          EXTRACT(MONTH FROM t.start_date)::int AS month,
+          COALESCE(SUM(p.amount), 0)            AS total
+        FROM payments p
+        JOIN trainings t ON t.id = p.training_id
+        WHERE p.org_id      = ${orgId}
+          AND p.status       = 'paid'
+          AND p.training_id IS NOT NULL
+          AND t.start_date >= ${from}
+          AND t.start_date <= ${to}
         GROUP BY year, month
       `,
     ]);

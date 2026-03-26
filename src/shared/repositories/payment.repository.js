@@ -80,69 +80,149 @@ class PaymentRepository extends CrudRepository {
   }
 
   /**
-   * Sum paid revenue in a date range (paidAt window).
+   * Sum paid revenue in a date range, attributed by subscription start date.
+   * Membership/training payments are grouped by their start_date, not paid_at.
    */
   async sumInRange(orgId, from, to) {
-    const result = await prisma.payment.aggregate({
-      where: { orgId, status: "paid", paidAt: { gte: from, lte: to } },
-      _sum: { amount: true },
-    });
-    return result._sum.amount || 0;
+    const [membershipResult, trainingResult] = await Promise.all([
+      prisma.$queryRaw`
+        SELECT COALESCE(SUM(p.amount), 0) AS total
+        FROM payments p
+        JOIN memberships m ON m.id = p.membership_id
+        WHERE p.org_id        = ${orgId}
+          AND p.status         = 'paid'
+          AND p.membership_id IS NOT NULL
+          AND m.start_date   >= ${from}
+          AND m.start_date   <= ${to}
+      `,
+      prisma.$queryRaw`
+        SELECT COALESCE(SUM(p.amount), 0) AS total
+        FROM payments p
+        JOIN trainings t ON t.id = p.training_id
+        WHERE p.org_id      = ${orgId}
+          AND p.status       = 'paid'
+          AND p.training_id IS NOT NULL
+          AND t.start_date >= ${from}
+          AND t.start_date <= ${to}
+      `,
+    ]);
+    return Number(membershipResult[0]?.total || 0) + Number(trainingResult[0]?.total || 0);
   }
 
   /**
-   * Sum paid revenue grouped by year+month for a date range.
+   * Sum paid revenue grouped by year+month for a date range, attributed by subscription start date.
    * Returns a Map keyed by "YYYY-M" -> total amount.
-   * Single query replacing N per-month sumInRange calls.
    */
   async revenueByMonths(orgId, from, to) {
-    const rows = await prisma.$queryRaw`
-      SELECT
-        EXTRACT(YEAR  FROM paid_at)::int AS year,
-        EXTRACT(MONTH FROM paid_at)::int AS month,
-        COALESCE(SUM(amount), 0)         AS total
-      FROM payments
-      WHERE org_id  = ${orgId}
-        AND status  = 'paid'
-        AND paid_at >= ${from}
-        AND paid_at <= ${to}
-      GROUP BY year, month
-    `;
+    const [membershipRows, trainingRows] = await Promise.all([
+      prisma.$queryRaw`
+        SELECT
+          EXTRACT(YEAR  FROM m.start_date)::int AS year,
+          EXTRACT(MONTH FROM m.start_date)::int AS month,
+          COALESCE(SUM(p.amount), 0)            AS total
+        FROM payments p
+        JOIN memberships m ON m.id = p.membership_id
+        WHERE p.org_id        = ${orgId}
+          AND p.status         = 'paid'
+          AND p.membership_id IS NOT NULL
+          AND m.start_date   >= ${from}
+          AND m.start_date   <= ${to}
+        GROUP BY year, month
+      `,
+      prisma.$queryRaw`
+        SELECT
+          EXTRACT(YEAR  FROM t.start_date)::int AS year,
+          EXTRACT(MONTH FROM t.start_date)::int AS month,
+          COALESCE(SUM(p.amount), 0)            AS total
+        FROM payments p
+        JOIN trainings t ON t.id = p.training_id
+        WHERE p.org_id      = ${orgId}
+          AND p.status       = 'paid'
+          AND p.training_id IS NOT NULL
+          AND t.start_date >= ${from}
+          AND t.start_date <= ${to}
+        GROUP BY year, month
+      `,
+    ]);
     const map = new Map();
-    for (const r of rows) {
-      map.set(`${r.year}-${r.month}`, Number(r.total));
+    for (const r of membershipRows) {
+      const key = `${r.year}-${r.month}`;
+      map.set(key, (map.get(key) || 0) + Number(r.total));
+    }
+    for (const r of trainingRows) {
+      const key = `${r.year}-${r.month}`;
+      map.set(key, (map.get(key) || 0) + Number(r.total));
     }
     return map;
   }
 
   async getPaymentStats(orgId, { trainingOnly = false, membershipOnly = false } = {}) {
     const startOfMonth = getStartOfCurrentMonth();
-    const baseWhere = { orgId, status: "paid" };
+    const endOfMonth = new Date(startOfMonth.getFullYear(), startOfMonth.getMonth() + 1, 0, 23, 59, 59, 999);
+    const epoch = new Date(0);
 
     if (trainingOnly) {
-      baseWhere.trainingId = { not: null };
-    } else if (membershipOnly) {
-      baseWhere.membershipId = { not: null };
+      const [totalResult, monthResult] = await Promise.all([
+        prisma.$queryRaw`
+          SELECT COALESCE(SUM(p.amount), 0) AS total
+          FROM payments p
+          JOIN trainings t ON t.id = p.training_id
+          WHERE p.org_id      = ${orgId}
+            AND p.status       = 'paid'
+            AND p.training_id IS NOT NULL
+            AND t.start_date >= ${epoch}
+        `,
+        prisma.$queryRaw`
+          SELECT COALESCE(SUM(p.amount), 0) AS total
+          FROM payments p
+          JOIN trainings t ON t.id = p.training_id
+          WHERE p.org_id      = ${orgId}
+            AND p.status       = 'paid'
+            AND p.training_id IS NOT NULL
+            AND t.start_date >= ${startOfMonth}
+            AND t.start_date <= ${endOfMonth}
+        `,
+      ]);
+      return {
+        totalCollected: Number(totalResult[0]?.total || 0),
+        collectedThisMonth: Number(monthResult[0]?.total || 0),
+      };
     }
 
-    const [totalCollected, collectedThisMonth] = await Promise.all([
-      prisma.payment.aggregate({
-        where: baseWhere,
-        _sum: { amount: true },
-      }),
-      prisma.payment.aggregate({
-        where: {
-          ...baseWhere,
-          paidAt: { gte: startOfMonth },
-        },
-        _sum: { amount: true },
-      }),
-    ]);
+    if (membershipOnly) {
+      const [totalResult, monthResult] = await Promise.all([
+        prisma.$queryRaw`
+          SELECT COALESCE(SUM(p.amount), 0) AS total
+          FROM payments p
+          JOIN memberships m ON m.id = p.membership_id
+          WHERE p.org_id        = ${orgId}
+            AND p.status         = 'paid'
+            AND p.membership_id IS NOT NULL
+            AND m.start_date   >= ${epoch}
+        `,
+        prisma.$queryRaw`
+          SELECT COALESCE(SUM(p.amount), 0) AS total
+          FROM payments p
+          JOIN memberships m ON m.id = p.membership_id
+          WHERE p.org_id        = ${orgId}
+            AND p.status         = 'paid'
+            AND p.membership_id IS NOT NULL
+            AND m.start_date   >= ${startOfMonth}
+            AND m.start_date   <= ${endOfMonth}
+        `,
+      ]);
+      return {
+        totalCollected: Number(totalResult[0]?.total || 0),
+        collectedThisMonth: Number(monthResult[0]?.total || 0),
+      };
+    }
 
-    return {
-      totalCollected: totalCollected._sum.amount || 0,
-      collectedThisMonth: collectedThisMonth._sum.amount || 0,
-    };
+    // Combined (no filter)
+    const [totalCollected, collectedThisMonth] = await Promise.all([
+      this.sumInRange(orgId, epoch, new Date()),
+      this.sumInRange(orgId, startOfMonth, endOfMonth),
+    ]);
+    return { totalCollected, collectedThisMonth };
   }
 }
 
