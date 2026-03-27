@@ -18,6 +18,10 @@ router.get("/stats", memberController.getMemberStats);
 // Bulk import members from CSV rows
 router.post("/import", memberController.importMembers);
 
+// Batch update / delete members
+router.patch("/batch", memberController.batchUpdateMembers);
+router.delete("/batch", memberController.batchDeleteMembers);
+
 // Get all members in an organization
 router.get("/", memberController.getAllMembers);
 

@@ -398,6 +398,12 @@ model OrgNotificationSettings {
   digestEnabled           Boolean  @default(false) @map("digest_enabled")
   memberReminderEnabled   Boolean  @default(false) @map("member_reminder_enabled")
   reminderDaysBefore      Int      @default(3) @map("reminder_days_before")
+  // Welcome message
+  welcomeEnabled          Boolean  @default(false) @map("welcome_enabled")
+  welcomeMessage          String?  @map("welcome_message")
+  // Dues reminder
+  duesReminderEnabled     Boolean  @default(false) @map("dues_reminder_enabled")
+  duesReminderDaysOld     Int      @default(7) @map("dues_reminder_days_old")
   createdAt               DateTime @default(now()) @map("created_at")
   updatedAt               DateTime @updatedAt @map("updated_at")
 

@@ -149,6 +149,19 @@ class TrainingController {
     }
   };
 
+  deleteTraining = async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      await trainingService.deleteTraining(id);
+      res.status(200).json({
+        success: true,
+        message: "Training deleted successfully",
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
   cancelTraining = async (req, res, next) => {
     try {
       const { id } = req.params;

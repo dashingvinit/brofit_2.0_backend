@@ -8,6 +8,11 @@ const router = express.Router();
  * Base path: /api/v1/memberships
  */
 
+// Batch action routes (before /:id to avoid conflicts)
+router.put("/batch/cancel", membershipController.batchCancelMemberships);
+router.put("/batch/freeze", membershipController.batchFreezeMemberships);
+router.put("/batch/unfreeze", membershipController.batchUnfreezeMemberships);
+
 // Static routes first (before /:id to avoid conflicts)
 router.get("/stats", membershipController.getMembershipStats);
 router.get("/expiring", membershipController.getExpiringMemberships);
@@ -40,6 +45,7 @@ router.get("/:id", membershipController.getMembershipById);
 router.get("/:id/dues", membershipController.getMembershipDues);
 router.get("/:id/payments", membershipController.getPaymentsByMembership);
 router.patch("/:id", membershipController.updateMembership);
+router.delete("/:id", membershipController.deleteMembership);
 router.put("/:id/cancel", membershipController.cancelMembership);
 router.put("/:id/freeze", membershipController.freezeMembership);
 router.put("/:id/unfreeze", membershipController.unfreezeMembership);

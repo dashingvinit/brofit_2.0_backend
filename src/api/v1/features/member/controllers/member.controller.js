@@ -164,6 +164,40 @@ class MemberController {
     }
   };
 
+  batchUpdateMembers = async (req, res, next) => {
+    try {
+      const { ids, ...updateData } = req.body;
+      if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ success: false, message: "ids array is required" });
+      }
+      const result = await memberService.batchUpdateMembers(ids, updateData);
+      res.status(200).json({
+        success: true,
+        message: `Updated ${result.succeeded} member(s)${result.failed > 0 ? `, ${result.failed} failed` : ''}`,
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  batchDeleteMembers = async (req, res, next) => {
+    try {
+      const { ids } = req.body;
+      if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ success: false, message: "ids array is required" });
+      }
+      const result = await memberService.batchDeleteMembers(ids);
+      res.status(200).json({
+        success: true,
+        message: `Deleted ${result.succeeded} member(s)${result.failed > 0 ? `, ${result.failed} failed` : ''}`,
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
   /**
    * Bulk import members from a JSON array (parsed from CSV on the client).
    * POST /api/v1/members/import

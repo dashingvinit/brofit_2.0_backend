@@ -40,6 +40,7 @@ router.get("/:id", trainingController.getTrainingById);
 router.get("/:id/dues", trainingController.getTrainingDues);
 router.get("/:id/payments", trainingController.getPaymentsByTraining);
 router.patch("/:id", trainingController.updateTraining);
+router.delete("/:id", trainingController.deleteTraining);
 router.put("/:id/cancel", trainingController.cancelTraining);
 router.put("/:id/freeze", trainingController.freezeTraining);
 router.put("/:id/unfreeze", trainingController.unfreezeTraining);

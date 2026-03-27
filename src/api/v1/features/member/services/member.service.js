@@ -1,6 +1,8 @@
 const memberRepository = require("../repositories/member.repository");
 const { prisma } = require("../../../../../config/prisma.config");
 const { createError } = require("../../../../../shared/helpers/subscription.helper");
+const { sendWhatsApp, DEFAULT_WELCOME_MESSAGE } = require("../../../../../shared/services/whatsapp.service");
+const notificationsRepository = require("../../notifications/repositories/notifications.repository");
 
 class MemberService {
   async _getMemberOrThrow(memberId) {
@@ -43,7 +45,7 @@ class MemberService {
       }
     }
 
-    return await memberRepository.create({
+    const member = await memberRepository.create({
       orgId: memberData.orgId,
       clerkUserId: memberData.clerkUserId || null,
       firstName: memberData.firstName,
@@ -61,6 +63,19 @@ class MemberService {
       isActive: memberData.isActive ?? true,
       referredById: memberData.referredById || null,
     });
+
+    // Fire-and-forget welcome WhatsApp (never blocks or throws)
+    if (member.phone) {
+      notificationsRepository.getSettings(memberData.orgId).then((settings) => {
+        if (settings?.welcomeEnabled) {
+          const body = (settings.welcomeMessage?.trim() || DEFAULT_WELCOME_MESSAGE)
+            .replace(/\{name\}/gi, member.firstName);
+          sendWhatsApp(member.phone, body).catch(() => {});
+        }
+      }).catch(() => {});
+    }
+
+    return member;
   }
 
   async getMemberById(memberId) {
@@ -120,6 +135,24 @@ class MemberService {
     }
 
     return await memberRepository.update(memberId, dbData);
+  }
+
+  async batchUpdateMembers(memberIds, updateData) {
+    const results = await Promise.allSettled(
+      memberIds.map((id) => memberRepository.update(id, updateData))
+    );
+    const succeeded = results.filter((r) => r.status === 'fulfilled').length;
+    const failed = results.filter((r) => r.status === 'rejected').length;
+    return { succeeded, failed, total: memberIds.length };
+  }
+
+  async batchDeleteMembers(memberIds) {
+    const results = await Promise.allSettled(
+      memberIds.map((id) => memberRepository.destroy(id))
+    );
+    const succeeded = results.filter((r) => r.status === 'fulfilled').length;
+    const failed = results.filter((r) => r.status === 'rejected').length;
+    return { succeeded, failed, total: memberIds.length };
   }
 
   async deleteMember(memberId) {

@@ -22,6 +22,30 @@ class TrainerRepository extends CrudRepository {
     );
   }
 
+  async findAssignmentHistory(trainerId) {
+    return await prisma.training.findMany({
+      where: { trainerId },
+      include: {
+        member: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            phone: true,
+            email: true,
+            isActive: true,
+          },
+        },
+        planVariant: {
+          include: {
+            planType: { select: { name: true } },
+          },
+        },
+      },
+      orderBy: { startDate: 'desc' },
+    });
+  }
+
   async findWithActiveClients(trainerId) {
     return await this.get(trainerId, {
       include: {

@@ -156,6 +156,18 @@ class MembershipService {
     return await membershipRepository.findByIdWithDetails(membershipId);
   }
 
+  async deleteMembership(membershipId) {
+    const membership = await this._getMembershipOrThrow(membershipId);
+    const paymentCount = await paymentRepository.count({ membershipId });
+    if (paymentCount > 0) {
+      throw createError(
+        "Cannot delete a membership that has payments recorded against it",
+        409,
+      );
+    }
+    await membershipRepository.hardDelete(membershipId);
+  }
+
   async cancelMembership(membershipId) {
     const membership = await this._getMembershipOrThrow(membershipId);
     validateStatusTransition(membership.status, "cancel", "Membership");
@@ -188,6 +200,33 @@ class MembershipService {
       freezeEndDate: null,
     });
     return await membershipRepository.findByIdWithDetails(membershipId);
+  }
+
+  async batchCancelMemberships(membershipIds) {
+    const results = await Promise.allSettled(
+      membershipIds.map((id) => this.cancelMembership(id))
+    );
+    const succeeded = results.filter((r) => r.status === 'fulfilled').length;
+    const failed = results.filter((r) => r.status === 'rejected').length;
+    return { succeeded, failed, total: membershipIds.length };
+  }
+
+  async batchFreezeMemberships(membershipIds, { reason, freezeStartDate, freezeEndDate } = {}) {
+    const results = await Promise.allSettled(
+      membershipIds.map((id) => this.freezeMembership(id, { reason, freezeStartDate, freezeEndDate }))
+    );
+    const succeeded = results.filter((r) => r.status === 'fulfilled').length;
+    const failed = results.filter((r) => r.status === 'rejected').length;
+    return { succeeded, failed, total: membershipIds.length };
+  }
+
+  async batchUnfreezeMemberships(membershipIds) {
+    const results = await Promise.allSettled(
+      membershipIds.map((id) => this.unfreezeMembership(id))
+    );
+    const succeeded = results.filter((r) => r.status === 'fulfilled').length;
+    const failed = results.filter((r) => r.status === 'rejected').length;
+    return { succeeded, failed, total: membershipIds.length };
   }
 
   async getExpiringMemberships(orgId, daysAhead = 7) {

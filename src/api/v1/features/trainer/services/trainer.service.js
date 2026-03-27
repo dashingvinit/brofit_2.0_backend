@@ -60,6 +60,11 @@ class TrainerService {
     await this._getTrainerOrThrow(trainerId);
     return await trainerRepository.findWithActiveClients(trainerId);
   }
+
+  async getTrainerAssignmentHistory(trainerId) {
+    await this._getTrainerOrThrow(trainerId);
+    return await trainerRepository.findAssignmentHistory(trainerId);
+  }
 }
 
 module.exports = new TrainerService();

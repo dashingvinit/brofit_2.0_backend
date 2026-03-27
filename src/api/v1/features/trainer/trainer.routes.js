@@ -16,6 +16,7 @@ router.post("/", trainerController.createTrainer);
 router.get("/payout-summary", trainerPayoutController.getOutstandingSummary);
 
 router.get("/:id/clients", trainerController.getTrainerClients);
+router.get("/:id/history", trainerController.getAssignmentHistory);
 router.get("/:id/payout-schedule", trainerPayoutController.getPayoutSchedule);
 router.get("/:id/payout-history", trainerPayoutController.getPayoutHistory);
 router.post("/:id/payouts", trainerPayoutController.recordPayout);

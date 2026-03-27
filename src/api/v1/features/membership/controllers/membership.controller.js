@@ -148,6 +148,19 @@ class MembershipController {
     }
   };
 
+  deleteMembership = async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      await membershipService.deleteMembership(id);
+      res.status(200).json({
+        success: true,
+        message: "Membership deleted successfully",
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
   cancelMembership = async (req, res, next) => {
     try {
       const { id } = req.params;
@@ -188,6 +201,57 @@ class MembershipController {
         success: true,
         message: "Membership unfrozen successfully",
         data: membership,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  batchCancelMemberships = async (req, res, next) => {
+    try {
+      const { ids } = req.body;
+      if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ success: false, message: "ids array is required" });
+      }
+      const result = await membershipService.batchCancelMemberships(ids);
+      res.status(200).json({
+        success: true,
+        message: `Cancelled ${result.succeeded} membership(s)${result.failed > 0 ? `, ${result.failed} failed` : ''}`,
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  batchFreezeMemberships = async (req, res, next) => {
+    try {
+      const { ids, reason, freezeStartDate, freezeEndDate } = req.body;
+      if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ success: false, message: "ids array is required" });
+      }
+      const result = await membershipService.batchFreezeMemberships(ids, { reason, freezeStartDate, freezeEndDate });
+      res.status(200).json({
+        success: true,
+        message: `Frozen ${result.succeeded} membership(s)${result.failed > 0 ? `, ${result.failed} failed` : ''}`,
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  batchUnfreezeMemberships = async (req, res, next) => {
+    try {
+      const { ids } = req.body;
+      if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ success: false, message: "ids array is required" });
+      }
+      const result = await membershipService.batchUnfreezeMemberships(ids);
+      res.status(200).json({
+        success: true,
+        message: `Unfrozen ${result.succeeded} membership(s)${result.failed > 0 ? `, ${result.failed} failed` : ''}`,
+        data: result,
       });
     } catch (error) {
       next(error);

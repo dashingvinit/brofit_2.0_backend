@@ -1,20 +1,8 @@
-const twilio = require("twilio");
+const { getTwilioClient, formatPhone } = require("../../shared/services/whatsapp.service");
 const config = require("../../config/env.config");
 const notificationsRepository = require("../../api/v1/features/notifications/repositories/notifications.repository");
 const reportsRepository = require("../../api/v1/features/reports/repositories/reports.repository");
 const { prisma } = require("../../config/prisma.config");
-
-function getTwilioClient() {
-  if (!config.twilio.accountSid || !config.twilio.authToken) return null;
-  return twilio(config.twilio.accountSid, config.twilio.authToken);
-}
-
-function formatPhone(phone) {
-  const digits = phone.replace(/\D/g, "");
-  if (digits.startsWith("91") && digits.length === 12) return `+${digits}`;
-  if (digits.length === 10) return `+91${digits}`;
-  return `+${digits}`;
-}
 
 function buildDigestMessage(orgName, expiringSoon, expiredRecently, pendingDues) {
   const lines = [];
@@ -79,6 +67,25 @@ async function sendMemberReminder(client, fromNumber, member, membership, daysBe
   });
 }
 
+async function sendDuesReminder(client, fromNumber, payment) {
+  const name = `${payment.member.firstName} ${payment.member.lastName}`;
+  const amount = payment.amount.toLocaleString("en-IN");
+
+  const body =
+    `Hi ${payment.member.firstName}! 👋\n\n` +
+    `This is a friendly reminder that you have a pending payment of *₹${amount}* with us.\n\n` +
+    `Please clear your dues at the earliest to avoid any inconvenience.\n\n` +
+    `_Brofit 2.0_`;
+
+  await client.messages.create({
+    from: fromNumber,
+    to: `whatsapp:${formatPhone(payment.member.phone)}`,
+    body,
+  });
+
+  console.log(`[WhatsApp] ✓ Dues reminder sent to ${name}`);
+}
+
 const run = async () => {
   const client = getTwilioClient();
   if (!client) {
@@ -126,7 +133,7 @@ const run = async () => {
         console.log(`[WhatsApp] ✓ Digest sent to owner of org ${orgId}`);
       }
 
-      // --- Member reminders ---
+      // --- Member renewal reminders ---
       if (settings.memberReminderEnabled) {
         const days = settings.reminderDaysBefore ?? 3;
         const expiring = await notificationsRepository.getMembersExpiringSoon(orgId, days);
@@ -147,6 +154,24 @@ const run = async () => {
             console.log(`[WhatsApp] ✓ Reminder sent to ${membership.member.firstName} (org ${orgId})`);
           } catch (err) {
             console.error(`[WhatsApp] ✗ Reminder failed for member ${membership.memberId}:`, err.message);
+          }
+        }
+      }
+
+      // --- Dues reminders to members ---
+      if (settings.duesReminderEnabled) {
+        const daysOld = settings.duesReminderDaysOld ?? 7;
+        const pendingPayments = await notificationsRepository.getMembersWithPendingDues(orgId, daysOld);
+
+        // Deduplicate: one reminder per member per run
+        const seen = new Set();
+        for (const payment of pendingPayments) {
+          if (!payment.member.phone || seen.has(payment.memberId)) continue;
+          seen.add(payment.memberId);
+          try {
+            await sendDuesReminder(client, fromNumber, payment);
+          } catch (err) {
+            console.error(`[WhatsApp] ✗ Dues reminder failed for member ${payment.memberId}:`, err.message);
           }
         }
       }

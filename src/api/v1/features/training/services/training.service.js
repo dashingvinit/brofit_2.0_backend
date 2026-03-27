@@ -150,6 +150,18 @@ class TrainingService {
     return await trainingRepository.findByIdWithDetails(trainingId);
   }
 
+  async deleteTraining(trainingId) {
+    await this._getTrainingOrThrow(trainingId);
+    const paymentCount = await paymentRepository.count({ trainingId });
+    if (paymentCount > 0) {
+      throw createError(
+        "Cannot delete a training that has payments recorded against it",
+        409,
+      );
+    }
+    await trainingRepository.hardDelete(trainingId);
+  }
+
   async cancelTraining(trainingId) {
     const training = await this._getTrainingOrThrow(trainingId);
     validateStatusTransition(training.status, "cancel", "Training");
