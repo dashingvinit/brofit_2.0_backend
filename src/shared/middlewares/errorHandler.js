@@ -34,7 +34,7 @@ const errorHandler = (err, req, res, next) => {
   const isClientError = statusCode >= 400 && statusCode < 500;
   const response = {
     success: false,
-    message: isClientError || config.isDevelopment() ? message : "Internal server error",
+    message: message || "Internal server error",
     ...(err.errors && err.errors.length > 0 && { errors: err.errors }),
     ...(config.isDevelopment() && { stack: err.stack }),
   };
