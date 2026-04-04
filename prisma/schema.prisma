@@ -24,6 +24,7 @@ model Organization {
   attendances           Attendance[]
   trainerPayouts        TrainerPayout[]
   notificationSettings  OrgNotificationSettings?
+  staffPermissions      OrgStaffPermissions?
   offers                Offer[]
 
   @@map("organizations")
@@ -388,6 +389,26 @@ model Offer {
   @@index([type])
   @@index([isActive])
   @@map("offers")
+}
+
+// ─── Staff Permissions ────────────────────────────────────────────────────────
+
+model OrgStaffPermissions {
+  id                    String   @id @default(uuid())
+  orgId                 String   @unique @map("org_id")
+  canTakeAttendance     Boolean  @default(true)  @map("can_take_attendance")
+  canRegisterMember     Boolean  @default(false) @map("can_register_member")
+  canCreateMembership   Boolean  @default(false) @map("can_create_membership")
+  canCreateTraining     Boolean  @default(false) @map("can_create_training")
+  canRecordPayment      Boolean  @default(false) @map("can_record_payment")
+  canViewMembers        Boolean  @default(true)  @map("can_view_members")
+  canViewReports        Boolean  @default(false) @map("can_view_reports")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  org Organization @relation(fields: [orgId], references: [id])
+
+  @@map("org_staff_permissions")
 }
 
 // ─── Notifications ─────────────────────────────────────────────────────────────
