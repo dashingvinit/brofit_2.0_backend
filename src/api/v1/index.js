@@ -10,6 +10,8 @@ const analyticsRoutes = require("./features/analytics/analytics.routes");
 const attendanceRoutes = require("./features/attendance/attendance.routes");
 const notificationsRoutes = require("./features/notifications/notifications.routes");
 const offerRoutes = require("./features/offer/offer.routes");
+const platformRoutes = require("./features/platform/platform.routes");
+const { requireActiveOrg } = require("../../shared/helpers/auth.helper");
 
 const router = express.Router();
 
@@ -22,7 +24,11 @@ router.get("/health", (req, res) => {
   });
 });
 
-// Feature routes
+// Super admin — platform management (no org context needed)
+router.use("/platform", platformRoutes);
+
+// Gym feature routes — block if org is suspended
+router.use(requireActiveOrg);
 router.use("/members", memberRoutes);
 router.use("/plans", planRoutes);
 router.use("/memberships", membershipRoutes);
@@ -34,5 +40,6 @@ router.use("/analytics", analyticsRoutes);
 router.use("/attendance", attendanceRoutes);
 router.use("/notifications", notificationsRoutes);
 router.use("/offers", offerRoutes);
+
 
 module.exports = router;
