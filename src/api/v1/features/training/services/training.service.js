@@ -152,14 +152,12 @@ class TrainingService {
 
   async deleteTraining(trainingId) {
     await this._getTrainingOrThrow(trainingId);
-    const paymentCount = await paymentRepository.count({ trainingId });
-    if (paymentCount > 0) {
-      throw createError(
-        "Cannot delete a training that has payments recorded against it",
-        409,
-      );
-    }
-    await trainingRepository.hardDelete(trainingId);
+
+    await prisma.$transaction(async (tx) => {
+      await tx.trainerPayout.deleteMany({ where: { trainingId } });
+      await tx.payment.deleteMany({ where: { trainingId } });
+      await tx.training.delete({ where: { id: trainingId } });
+    });
   }
 
   async cancelTraining(trainingId) {

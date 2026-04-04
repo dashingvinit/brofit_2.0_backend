@@ -158,14 +158,11 @@ class MembershipService {
 
   async deleteMembership(membershipId) {
     const membership = await this._getMembershipOrThrow(membershipId);
-    const paymentCount = await paymentRepository.count({ membershipId });
-    if (paymentCount > 0) {
-      throw createError(
-        "Cannot delete a membership that has payments recorded against it",
-        409,
-      );
-    }
-    await membershipRepository.hardDelete(membershipId);
+
+    await prisma.$transaction(async (tx) => {
+      await tx.payment.deleteMany({ where: { membershipId } });
+      await tx.membership.delete({ where: { id: membershipId } });
+    });
   }
 
   async cancelMembership(membershipId) {

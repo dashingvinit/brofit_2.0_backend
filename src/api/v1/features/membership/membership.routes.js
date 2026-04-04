@@ -33,6 +33,7 @@ router.get(
 router.get("/payments/:id", membershipController.getPaymentById);
 router.post("/payments", membershipController.recordPayment);
 router.patch("/payments/:id/status", membershipController.updatePaymentStatus);
+router.delete("/payments/:id", membershipController.deletePayment);
 
 // Get all memberships in organization
 router.get("/", membershipController.getAllMemberships);

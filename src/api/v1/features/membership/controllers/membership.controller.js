@@ -406,6 +406,20 @@ class MembershipController {
     }
   };
 
+  deletePayment = async (req, res, next) => {
+    try {
+      const { id } = req.params;
+      const result = await paymentService.deletePayment(id);
+
+      res.status(200).json({
+        success: true,
+        message: result.message,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
   updatePaymentStatus = async (req, res, next) => {
     try {
       const { id } = req.params;

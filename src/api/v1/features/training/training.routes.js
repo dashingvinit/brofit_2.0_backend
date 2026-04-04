@@ -28,6 +28,7 @@ router.get(
 router.get("/payments/:id", trainingController.getPaymentById);
 router.post("/payments", trainingController.recordPayment);
 router.patch("/payments/:id/status", trainingController.updatePaymentStatus);
+router.delete("/payments/:id", trainingController.deletePayment);
 
 // Get all trainings in organization
 router.get("/", trainingController.getAllTrainings);

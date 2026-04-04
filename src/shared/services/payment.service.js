@@ -90,6 +90,16 @@ class PaymentService {
     };
   }
 
+  async deletePayment(paymentId) {
+    const payment = await paymentRepository.get(paymentId);
+    if (!payment) {
+      throw createError("Payment not found", 404);
+    }
+
+    await paymentRepository.hardDelete(paymentId);
+    return { message: "Payment deleted successfully" };
+  }
+
   async updatePaymentStatus(paymentId, status) {
     const payment = await paymentRepository.get(paymentId);
     if (!payment) {
