@@ -4,6 +4,7 @@ const { clerkMiddleware } = require("@clerk/express");
 const config = require("./src/config/env.config");
 const { testPrismaConnection } = require("./src/config/prisma.config");
 const apiRoutes = require("./src/api");
+const whatsappWebhookRoutes = require("./src/api/v1/features/whatsapp-webhook/whatsapp-webhook.routes");
 const { errorHandler, notFoundHandler } = require("./src/shared/middlewares");
 const { startScheduler } = require("./src/scheduler");
 const expireAndSnapshotJob = require("./src/scheduler/jobs/expire-and-snapshot.job");
@@ -28,6 +29,9 @@ app.use(
 // Body parsing
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Twilio webhook — must be before Clerk middleware (Twilio has no auth headers)
+app.use("/api/v1/webhooks/whatsapp", whatsappWebhookRoutes);
 
 // Clerk authentication middleware
 app.use(clerkMiddleware());

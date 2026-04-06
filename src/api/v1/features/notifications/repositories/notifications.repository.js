@@ -28,7 +28,7 @@ class NotificationsRepository {
         endDate: { gte: now, lte: cutoff },
       },
       include: {
-        member: { select: { firstName: true, lastName: true, phone: true } },
+        member: { select: { firstName: true, lastName: true, phone: true, whatsappOptedIn: true } },
         planVariant: { include: { planType: { select: { name: true } } } },
       },
       orderBy: { endDate: "asc" },
@@ -50,7 +50,7 @@ class NotificationsRepository {
         endDate: { gte: cutoff, lte: now },
       },
       include: {
-        member: { select: { firstName: true, lastName: true, phone: true } },
+        member: { select: { firstName: true, lastName: true, phone: true, whatsappOptedIn: true } },
         planVariant: { include: { planType: { select: { name: true } } } },
       },
       orderBy: { endDate: "desc" },
@@ -71,7 +71,7 @@ class NotificationsRepository {
         createdAt: { lte: cutoff },
       },
       include: {
-        member: { select: { firstName: true, lastName: true, phone: true } },
+        member: { select: { firstName: true, lastName: true, phone: true, whatsappOptedIn: true } },
       },
       orderBy: { createdAt: "asc" },
     });

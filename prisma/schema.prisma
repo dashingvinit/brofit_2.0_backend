@@ -41,11 +41,12 @@ model Member {
   dateOfBirth   DateTime  @map("date_of_birth")
   gender        String
   joinDate      DateTime  @map("join_date")
-  notes         String?
-  isActive      Boolean   @default(true) @map("is_active")
-  referredById  String?   @map("referred_by_id")
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
+  notes              String?
+  isActive           Boolean   @default(true) @map("is_active")
+  referredById       String?   @map("referred_by_id")
+  whatsappOptedIn    Boolean   @default(false) @map("whatsapp_opted_in")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
 
   organization  Organization @relation(fields: [orgId], references: [id])
   memberships   Membership[]

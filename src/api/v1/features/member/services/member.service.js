@@ -1,7 +1,7 @@
 const memberRepository = require("../repositories/member.repository");
 const { prisma } = require("../../../../../config/prisma.config");
 const { createError } = require("../../../../../shared/helpers/subscription.helper");
-const { sendWhatsApp, DEFAULT_WELCOME_MESSAGE } = require("../../../../../shared/services/whatsapp.service");
+const { sendWelcomeTemplate } = require("../../../../../shared/services/whatsapp.service");
 const notificationsRepository = require("../../notifications/repositories/notifications.repository");
 
 class MemberService {
@@ -15,11 +15,11 @@ class MemberService {
 
   async createMember(memberData) {
     // Auto-create org record from Clerk data if it doesn't exist yet
-    const existingOrg = await prisma.organization.findUnique({
+    let org = await prisma.organization.findUnique({
       where: { id: memberData.orgId },
     });
-    if (!existingOrg) {
-      await prisma.organization.create({
+    if (!org) {
+      org = await prisma.organization.create({
         data: {
           id: memberData.orgId,
           name: memberData.orgSlug || `Organization ${memberData.orgId}`,
@@ -64,13 +64,16 @@ class MemberService {
       referredById: memberData.referredById || null,
     });
 
-    // Fire-and-forget welcome WhatsApp (never blocks or throws)
+    // Fire-and-forget welcome template (never blocks or throws)
+    // Sends an approved WhatsApp template which opens the 24h free-form window
     if (member.phone) {
-      notificationsRepository.getSettings(memberData.orgId).then((settings) => {
+      notificationsRepository.getSettings(memberData.orgId).then(async (settings) => {
         if (settings?.welcomeEnabled) {
-          const body = (settings.welcomeMessage?.trim() || DEFAULT_WELCOME_MESSAGE)
-            .replace(/\{name\}/gi, member.firstName);
-          sendWhatsApp(member.phone, body).catch(() => {});
+          const gymName = org?.name || `Organization`;
+          await sendWelcomeTemplate(member.phone, {
+            memberName: member.firstName,
+            gymName,
+          });
         }
       }).catch(() => {});
     }

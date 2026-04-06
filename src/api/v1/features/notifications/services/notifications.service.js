@@ -87,7 +87,7 @@ class NotificationsService {
       // Members whose active membership expires in the next 7 days
       const expiring = await notificationsRepository.getMembersExpiringSoon(orgId, 7);
       members = expiring
-        .map((m) => ({ id: m.memberId, phone: m.member.phone, firstName: m.member.firstName }))
+        .map((m) => ({ id: m.memberId, phone: m.member.phone, firstName: m.member.firstName, whatsappOptedIn: m.member.whatsappOptedIn }))
         .filter((m) => m.phone);
     } else {
       // "all" or "active" — query members directly
@@ -97,7 +97,7 @@ class NotificationsService {
       };
       const rows = await prisma.member.findMany({
         where: whereClause,
-        select: { id: true, phone: true, firstName: true },
+        select: { id: true, phone: true, firstName: true, whatsappOptedIn: true },
       });
       members = rows.filter((m) => m.phone);
     }

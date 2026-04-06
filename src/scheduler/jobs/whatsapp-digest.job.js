@@ -149,6 +149,10 @@ const run = async () => {
         );
 
         for (const membership of toRemind) {
+          if (!membership.member.whatsappOptedIn) {
+            console.log(`[WhatsApp] Skipping reminder — ${membership.member.firstName} has not opted in.`);
+            continue;
+          }
           try {
             await sendMemberReminder(client, fromNumber, membership.member, membership, days);
             console.log(`[WhatsApp] ✓ Reminder sent to ${membership.member.firstName} (org ${orgId})`);
@@ -168,6 +172,10 @@ const run = async () => {
         for (const payment of pendingPayments) {
           if (!payment.member.phone || seen.has(payment.memberId)) continue;
           seen.add(payment.memberId);
+          if (!payment.member.whatsappOptedIn) {
+            console.log(`[WhatsApp] Skipping dues reminder — ${payment.member.firstName} has not opted in.`);
+            continue;
+          }
           try {
             await sendDuesReminder(client, fromNumber, payment);
           } catch (err) {
