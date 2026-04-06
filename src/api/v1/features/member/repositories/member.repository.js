@@ -122,6 +122,23 @@ class MemberRepository extends CrudRepository {
     return await this.find(whereClause, {
       take: limit,
       orderBy: { createdAt: "desc" },
+      include: {
+        memberships: {
+          where: { status: "active" },
+          take: 1,
+          orderBy: { startDate: "desc" },
+          select: {
+            id: true,
+            status: true,
+            planVariant: {
+              select: {
+                durationLabel: true,
+                planType: { select: { name: true, category: true } },
+              },
+            },
+          },
+        },
+      },
     });
   }
 }

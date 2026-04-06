@@ -42,6 +42,20 @@ class AttendanceRepository extends CrudRepository {
             lastName: true,
             phone: true,
             email: true,
+            memberships: {
+              where: { status: "active" },
+              take: 1,
+              orderBy: { startDate: "desc" },
+              select: {
+                id: true,
+                planVariant: {
+                  select: {
+                    durationLabel: true,
+                    planType: { select: { name: true, category: true } },
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -65,6 +79,20 @@ class AttendanceRepository extends CrudRepository {
             lastName: true,
             phone: true,
             email: true,
+            memberships: {
+              where: { status: "active" },
+              take: 1,
+              orderBy: { startDate: "desc" },
+              select: {
+                id: true,
+                planVariant: {
+                  select: {
+                    durationLabel: true,
+                    planType: { select: { name: true, category: true } },
+                  },
+                },
+              },
+            },
           },
         },
       },
