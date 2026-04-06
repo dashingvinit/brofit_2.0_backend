@@ -45,6 +45,7 @@ model Member {
   isActive           Boolean   @default(true) @map("is_active")
   referredById       String?   @map("referred_by_id")
   whatsappOptedIn    Boolean   @default(false) @map("whatsapp_opted_in")
+  welcomeSentAt      DateTime? @map("welcome_sent_at")
   createdAt          DateTime  @default(now()) @map("created_at")
   updatedAt          DateTime  @updatedAt @map("updated_at")
 

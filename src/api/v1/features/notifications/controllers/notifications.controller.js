@@ -82,6 +82,42 @@ class NotificationsController {
     }
   };
 
+  sendWelcomeTest = async (req, res, next) => {
+    try {
+      const orgId = requireOrgId(req, res);
+      if (!orgId) return;
+      const { phone } = req.body;
+      const data = await notificationsService.sendWelcomeTest(orgId, phone);
+      res.status(200).json({ success: true, data });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  getWelcomeStatus = async (req, res, next) => {
+    try {
+      const orgId = requireOrgId(req, res);
+      if (!orgId) return;
+
+      const data = await notificationsService.getWelcomeStatus(orgId);
+      res.status(200).json({ success: true, data });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  sendWelcomeToAll = async (req, res, next) => {
+    try {
+      const orgId = requireOrgId(req, res);
+      if (!orgId) return;
+
+      const result = await notificationsService.sendWelcomeToAll(orgId);
+      res.status(200).json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  };
+
   getDefaultWelcomeMessage = async (req, res, next) => {
     try {
       const data = notificationsService.getDefaultWelcomeMessage();

@@ -24,4 +24,13 @@ router.post("/run-digest", notificationsController.runDigest);
 // GET /notifications/default-welcome — returns the default welcome message template
 router.get("/default-welcome", notificationsController.getDefaultWelcomeMessage);
 
+// POST /notifications/send-welcome-all — send welcome template to all members who haven't received it yet
+router.post("/send-welcome-all", notificationsController.sendWelcomeToAll);
+
+// GET /notifications/welcome-status — breakdown of members by welcome sent / opted in / pending
+router.get("/welcome-status", notificationsController.getWelcomeStatus);
+
+// POST /notifications/send-welcome-test — send welcome template to a specific phone number
+router.post("/send-welcome-test", notificationsController.sendWelcomeTest);
+
 module.exports = router;

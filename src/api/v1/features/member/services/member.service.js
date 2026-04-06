@@ -70,10 +70,16 @@ class MemberService {
       notificationsRepository.getSettings(memberData.orgId).then(async (settings) => {
         if (settings?.welcomeEnabled) {
           const gymName = org?.name || `Organization`;
-          await sendWelcomeTemplate(member.phone, {
+          const ok = await sendWelcomeTemplate(member.phone, {
             memberName: member.firstName,
             gymName,
           });
+          if (ok) {
+            await prisma.member.update({
+              where: { id: member.id },
+              data: { welcomeSentAt: new Date() },
+            });
+          }
         }
       }).catch(() => {});
     }
