@@ -1,6 +1,6 @@
 const { Prisma } = require("@prisma/client");
 const { prisma } = require("../../../../../config/prisma.config");
-const { countActiveMembers } = require("../../../../../shared/helpers/subscription.helper");
+const { countActiveMembers, startOfDay } = require("../../../../../shared/helpers/subscription.helper");
 
 class ReportsRepository {
   /**
@@ -47,9 +47,8 @@ class ReportsRepository {
    * Get daily activity snapshots for an org over the last N days.
    */
   async getActivityTrend(orgId, days = 30) {
-    const since = new Date();
+    const since = startOfDay();
     since.setDate(since.getDate() - days);
-    since.setHours(0, 0, 0, 0);
 
     return prisma.dailyActivitySnapshot.findMany({
       where: { orgId, snapshotDate: { gte: since } },

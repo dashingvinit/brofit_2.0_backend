@@ -1,5 +1,6 @@
 const CrudRepository = require("../../../../../shared/repositories/crud.repository");
 const { prisma } = require("../../../../../config/prisma.config");
+const { startOfDay } = require("../../../../../shared/helpers/subscription.helper");
 
 class AttendanceRepository extends CrudRepository {
   constructor() {
@@ -19,8 +20,7 @@ class AttendanceRepository extends CrudRepository {
    * All members currently inside (exitTime is null, date is today).
    */
   async findCurrentlyInside(orgId) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const today = startOfDay();
     return await prisma.attendance.findMany({
       where: {
         orgId,
@@ -60,8 +60,7 @@ class AttendanceRepository extends CrudRepository {
    * All attendance records for a specific date (defaults to today).
    */
   async findByDate(orgId, date) {
-    const day = new Date(date);
-    day.setHours(0, 0, 0, 0);
+    const day = startOfDay(date);
     return await prisma.attendance.findMany({
       where: { orgId, date: day },
       include: {
@@ -121,8 +120,7 @@ class AttendanceRepository extends CrudRepository {
    * Count of members currently inside.
    */
   async countCurrentlyInside(orgId) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const today = startOfDay();
     return await prisma.attendance.count({
       where: { orgId, date: today, exitTime: null },
     });
@@ -132,8 +130,7 @@ class AttendanceRepository extends CrudRepository {
    * Total visit count for a date (for daily stats).
    */
   async countByDate(orgId, date) {
-    const day = new Date(date);
-    day.setHours(0, 0, 0, 0);
+    const day = startOfDay(date);
     return await prisma.attendance.count({ where: { orgId, date: day } });
   }
 
@@ -144,8 +141,7 @@ class AttendanceRepository extends CrudRepository {
    * Creates the row if it doesn't exist yet (upsert).
    */
   async incrementHourlySnapshot(orgId, date, hour) {
-    const day = new Date(date);
-    day.setHours(0, 0, 0, 0);
+    const day = startOfDay(date);
     await prisma.attendanceHourlySnapshot.upsert({
       where: { orgId_date_hour: { orgId, date: day, hour } },
       update: { count: { increment: 1 } },
@@ -180,8 +176,7 @@ class AttendanceRepository extends CrudRepository {
    * Returns 24 buckets: [{ hour: 0, count: 3 }, ...]
    */
   async getTodayHourlyCounts(orgId) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const today = startOfDay();
 
     const records = await prisma.attendance.findMany({
       where: { orgId, date: today },

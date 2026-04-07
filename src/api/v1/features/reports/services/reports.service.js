@@ -1,4 +1,5 @@
 const reportsRepository = require("../repositories/reports.repository");
+const { startOfDay } = require("../../../../../shared/helpers/subscription.helper");
 
 class ReportsService {
   /**
@@ -89,8 +90,7 @@ class ReportsService {
    */
   async takeActivitySnapshot(orgId, { expiredMemberships = 0, expiredTrainings = 0 } = {}) {
     const counts = await reportsRepository.getMemberCounts(orgId);
-    const snapshotDate = new Date();
-    snapshotDate.setHours(0, 0, 0, 0);
+    const snapshotDate = startOfDay();
 
     return reportsRepository.upsertDailySnapshot({
       orgId,

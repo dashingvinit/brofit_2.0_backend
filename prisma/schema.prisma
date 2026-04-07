@@ -164,6 +164,7 @@ model Membership {
   @@index([memberId])
   @@index([status])
   @@index([endDate])
+  @@index([orgId, status])
   @@map("memberships")
 }
 
@@ -263,6 +264,7 @@ model Payment {
   @@index([memberId])
   @@index([membershipId])
   @@index([trainingId])
+  @@index([orgId, paidAt])
   @@map("payments")
 }
 
@@ -351,6 +353,7 @@ model Expense {
 
   @@index([orgId])
   @@index([date])
+  @@index([orgId, date])
   @@map("expenses")
 }
 

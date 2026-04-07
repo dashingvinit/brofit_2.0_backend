@@ -121,6 +121,48 @@ function validatePaymentAmount(amount, finalPrice, paidAmount, entityName) {
 }
 
 /**
+ * Runs an async operation on each item in an array concurrently.
+ * Returns { succeeded, failed, total } counts.
+ * Partial failures are swallowed — callers get a summary, not an exception.
+ */
+async function executeBatch(items, fn) {
+  const results = await Promise.allSettled(items.map(fn));
+  return {
+    succeeded: results.filter((r) => r.status === "fulfilled").length,
+    failed: results.filter((r) => r.status === "rejected").length,
+    total: items.length,
+  };
+}
+
+/**
+ * Resolves the discount amount from an offer.
+ * Only applies to offers of type 'discount' or 'promo'.
+ * Returns the computed discount value, or null if no offer / wrong type.
+ */
+async function resolveOfferDiscount(offerId, orgId, planVariantPrice) {
+  if (!offerId) return null;
+  const offer = await prisma.offer.findFirst({
+    where: { id: offerId, orgId, isActive: true },
+  });
+  if (!offer) throw createError("Offer not found or inactive", 400);
+  if (!["discount", "promo"].includes(offer.type)) return null;
+  if (offer.discountType === "percentage") {
+    return (planVariantPrice * offer.discountValue) / 100;
+  }
+  return offer.discountValue;
+}
+
+/**
+ * Returns a new Date set to midnight (00:00:00.000) of the given date (local time).
+ * Pass no argument to get the start of today.
+ */
+function startOfDay(date) {
+  const d = date ? new Date(date) : new Date();
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+/**
  * Returns the start of the current month in UTC.
  */
 function getStartOfCurrentMonth() {
@@ -155,6 +197,9 @@ module.exports = {
   validateStatusTransition,
   calculateDues,
   validatePaymentAmount,
+  executeBatch,
+  resolveOfferDiscount,
+  startOfDay,
   getStartOfCurrentMonth,
   countActiveMembers,
 };

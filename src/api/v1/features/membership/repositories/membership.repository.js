@@ -1,6 +1,6 @@
 const CrudRepository = require("../../../../../shared/repositories/crud.repository");
 const { prisma } = require("../../../../../config/prisma.config");
-const { getStartOfCurrentMonth } = require("../../../../../shared/helpers/subscription.helper");
+const { getStartOfCurrentMonth, startOfDay } = require("../../../../../shared/helpers/subscription.helper");
 
 class MembershipRepository extends CrudRepository {
   constructor() {
@@ -70,8 +70,7 @@ class MembershipRepository extends CrudRepository {
   }
 
   async findExpiringMemberships(orgId, daysAhead = 7) {
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
+    const now = startOfDay();
     const futureDate = new Date();
     futureDate.setDate(futureDate.getDate() + daysAhead);
     futureDate.setHours(23, 59, 59, 999);

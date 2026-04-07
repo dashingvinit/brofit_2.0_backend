@@ -1,6 +1,6 @@
 const memberRepository = require("../repositories/member.repository");
 const { prisma } = require("../../../../../config/prisma.config");
-const { createError } = require("../../../../../shared/helpers/subscription.helper");
+const { createError, executeBatch } = require("../../../../../shared/helpers/subscription.helper");
 const { sendWelcomeTemplate } = require("../../../../../shared/services/whatsapp.service");
 const notificationsRepository = require("../../notifications/repositories/notifications.repository");
 
@@ -147,21 +147,11 @@ class MemberService {
   }
 
   async batchUpdateMembers(memberIds, updateData) {
-    const results = await Promise.allSettled(
-      memberIds.map((id) => memberRepository.update(id, updateData))
-    );
-    const succeeded = results.filter((r) => r.status === 'fulfilled').length;
-    const failed = results.filter((r) => r.status === 'rejected').length;
-    return { succeeded, failed, total: memberIds.length };
+    return executeBatch(memberIds, (id) => memberRepository.update(id, updateData));
   }
 
   async batchDeleteMembers(memberIds) {
-    const results = await Promise.allSettled(
-      memberIds.map((id) => memberRepository.destroy(id))
-    );
-    const succeeded = results.filter((r) => r.status === 'fulfilled').length;
-    const failed = results.filter((r) => r.status === 'rejected').length;
-    return { succeeded, failed, total: memberIds.length };
+    return executeBatch(memberIds, (id) => memberRepository.destroy(id));
   }
 
   async deleteMember(memberId) {

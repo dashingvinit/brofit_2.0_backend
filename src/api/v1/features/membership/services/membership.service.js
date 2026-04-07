@@ -9,20 +9,9 @@ const {
   calculatePricing,
   validateStatusTransition,
   calculateDues,
+  resolveOfferDiscount,
+  executeBatch,
 } = require("../../../../../shared/helpers/subscription.helper");
-
-async function resolveOfferDiscount(offerId, orgId, planVariantPrice) {
-  if (!offerId) return null;
-  const offer = await prisma.offer.findFirst({
-    where: { id: offerId, orgId, isActive: true },
-  });
-  if (!offer) throw createError("Offer not found or inactive", 400);
-  if (!["discount", "promo"].includes(offer.type)) return null;
-  if (offer.discountType === "percentage") {
-    return (planVariantPrice * offer.discountValue) / 100;
-  }
-  return offer.discountValue;
-}
 
 class MembershipService {
   async _getMembershipOrThrow(membershipId) {
@@ -200,30 +189,15 @@ class MembershipService {
   }
 
   async batchCancelMemberships(membershipIds) {
-    const results = await Promise.allSettled(
-      membershipIds.map((id) => this.cancelMembership(id))
-    );
-    const succeeded = results.filter((r) => r.status === 'fulfilled').length;
-    const failed = results.filter((r) => r.status === 'rejected').length;
-    return { succeeded, failed, total: membershipIds.length };
+    return executeBatch(membershipIds, (id) => this.cancelMembership(id));
   }
 
   async batchFreezeMemberships(membershipIds, { reason, freezeStartDate, freezeEndDate } = {}) {
-    const results = await Promise.allSettled(
-      membershipIds.map((id) => this.freezeMembership(id, { reason, freezeStartDate, freezeEndDate }))
-    );
-    const succeeded = results.filter((r) => r.status === 'fulfilled').length;
-    const failed = results.filter((r) => r.status === 'rejected').length;
-    return { succeeded, failed, total: membershipIds.length };
+    return executeBatch(membershipIds, (id) => this.freezeMembership(id, { reason, freezeStartDate, freezeEndDate }));
   }
 
   async batchUnfreezeMemberships(membershipIds) {
-    const results = await Promise.allSettled(
-      membershipIds.map((id) => this.unfreezeMembership(id))
-    );
-    const succeeded = results.filter((r) => r.status === 'fulfilled').length;
-    const failed = results.filter((r) => r.status === 'rejected').length;
-    return { succeeded, failed, total: membershipIds.length };
+    return executeBatch(membershipIds, (id) => this.unfreezeMembership(id));
   }
 
   async getExpiringMemberships(orgId, daysAhead = 7) {

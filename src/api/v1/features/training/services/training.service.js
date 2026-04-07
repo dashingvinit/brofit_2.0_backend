@@ -9,20 +9,8 @@ const {
   calculatePricing,
   validateStatusTransition,
   calculateDues,
+  resolveOfferDiscount,
 } = require("../../../../../shared/helpers/subscription.helper");
-
-async function resolveOfferDiscount(offerId, orgId, planVariantPrice) {
-  if (!offerId) return null;
-  const offer = await prisma.offer.findFirst({
-    where: { id: offerId, orgId, isActive: true },
-  });
-  if (!offer) throw createError("Offer not found or inactive", 400);
-  if (!["discount", "promo"].includes(offer.type)) return null;
-  if (offer.discountType === "percentage") {
-    return (planVariantPrice * offer.discountValue) / 100;
-  }
-  return offer.discountValue;
-}
 
 class TrainingService {
   async _getTrainingOrThrow(trainingId) {

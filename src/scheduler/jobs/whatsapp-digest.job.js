@@ -3,6 +3,7 @@ const config = require("../../config/env.config");
 const notificationsRepository = require("../../api/v1/features/notifications/repositories/notifications.repository");
 const reportsRepository = require("../../api/v1/features/reports/repositories/reports.repository");
 const { prisma } = require("../../config/prisma.config");
+const { startOfDay } = require("../../shared/helpers/subscription.helper");
 
 function buildDigestMessage(orgName, expiringSoon, expiredRecently, pendingDues) {
   const lines = [];
@@ -141,7 +142,7 @@ const run = async () => {
         // Only remind members expiring on exactly the target day
         const targetDate = new Date();
         targetDate.setDate(targetDate.getDate() + days);
-        const start = new Date(targetDate); start.setHours(0, 0, 0, 0);
+        const start = startOfDay(targetDate);
         const end = new Date(targetDate); end.setHours(23, 59, 59, 999);
 
         const toRemind = expiring.filter(

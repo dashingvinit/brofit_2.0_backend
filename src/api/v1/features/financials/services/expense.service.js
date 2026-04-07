@@ -1,15 +1,18 @@
 const expenseRepository = require("../repositories/expense.repository");
 const { createError } = require("../../../../../shared/helpers/subscription.helper");
+const cache = require("../../../../../shared/helpers/cache.helper");
 
 class ExpenseService {
   async createExpense(orgId, { amount, category, description, date }) {
-    return expenseRepository.create({
+    const result = await expenseRepository.create({
       orgId,
       amount: parseFloat(amount),
       category,
       description: description || null,
       date: new Date(date),
     });
+    cache.invalidate(`financials:${orgId}`);
+    return result;
   }
 
   async getExpenses(orgId, { month } = {}) {
@@ -32,6 +35,7 @@ class ExpenseService {
     if (data.description !== undefined) updates.description = data.description;
     if (data.date !== undefined) updates.date = new Date(data.date);
     await expenseRepository.update(id, orgId, updates);
+    cache.invalidate(`financials:${orgId}`);
     return expenseRepository.findOne(id, orgId);
   }
 
@@ -39,6 +43,7 @@ class ExpenseService {
     const existing = await expenseRepository.findOne(id, orgId);
     if (!existing) throw createError("Expense not found", 404);
     await expenseRepository.delete(id, orgId);
+    cache.invalidate(`financials:${orgId}`);
   }
 }
 

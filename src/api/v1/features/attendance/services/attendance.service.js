@@ -1,6 +1,6 @@
 const attendanceRepository = require("../repositories/attendance.repository");
 const memberRepository = require("../../member/repositories/member.repository");
-const { createError } = require("../../../../../shared/helpers/subscription.helper");
+const { createError, startOfDay } = require("../../../../../shared/helpers/subscription.helper");
 
 class AttendanceService {
   /**
@@ -17,8 +17,7 @@ class AttendanceService {
     }
 
     const now = new Date();
-    const today = new Date(now);
-    today.setHours(0, 0, 0, 0);
+    const today = startOfDay(now);
 
     const record = await attendanceRepository.create({
       orgId,
