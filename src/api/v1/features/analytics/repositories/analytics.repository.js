@@ -179,6 +179,30 @@ class AnalyticsRepository {
     return map;
   }
 
+  // ─── Membership Duration Preference ───────────────────────────────────────
+
+  async getMembershipDurationPreference(orgId) {
+    const groups = await prisma.membership.groupBy({
+      by: ["planVariantId"],
+      where: { orgId },
+      _count: { id: true },
+      orderBy: { _count: { id: "desc" } },
+    });
+
+    const variantIds = groups.map((g) => g.planVariantId);
+    const variants = await prisma.planVariant.findMany({
+      where: { id: { in: variantIds } },
+      select: {
+        id: true,
+        durationLabel: true,
+        durationDays: true,
+        planType: { select: { name: true } },
+      },
+    });
+
+    return { groups, variants };
+  }
+
   // ─── Demographics ──────────────────────────────────────────────────────────
 
   async getDemographics(orgId) {

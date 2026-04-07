@@ -170,6 +170,34 @@ class AnalyticsService {
     });
   }
 
+  // Membership duration preference: which plan variant durations members pick most
+  async getMembershipDurationPreference(orgId) {
+    const { groups, variants } =
+      await analyticsRepository.getMembershipDurationPreference(orgId);
+
+    const variantMap = Object.fromEntries(variants.map((v) => [v.id, v]));
+    const total = groups.reduce((sum, g) => sum + g._count.id, 0);
+
+    // Group by durationLabel (same label = same duration bucket regardless of plan type)
+    const durationMap = {};
+    for (const g of groups) {
+      const v = variantMap[g.planVariantId];
+      const label = v?.durationLabel || "Unknown";
+      const days = v?.durationDays ?? 0;
+      if (!durationMap[label]) {
+        durationMap[label] = { durationLabel: label, durationDays: days, count: 0 };
+      }
+      durationMap[label].count += g._count.id;
+    }
+
+    return Object.values(durationMap)
+      .sort((a, b) => b.count - a.count)
+      .map((d) => ({
+        ...d,
+        percentage: total > 0 ? Math.round((d.count / total) * 1000) / 10 : 0,
+      }));
+  }
+
   // Gender + age bracket distribution
   async getDemographics(orgId) {
     const members = await analyticsRepository.getDemographics(orgId);

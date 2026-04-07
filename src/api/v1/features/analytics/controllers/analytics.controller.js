@@ -77,6 +77,18 @@ class AnalyticsController {
     }
   };
 
+  // GET /analytics/membership-duration-preference
+  getMembershipDurationPreference = async (req, res, next) => {
+    try {
+      const orgId = requireOrgId(req, res);
+      if (!orgId) return;
+      const data = await analyticsService.getMembershipDurationPreference(orgId);
+      res.status(200).json({ success: true, data });
+    } catch (error) {
+      next(error);
+    }
+  };
+
   // GET /analytics/demographics
   getDemographics = async (req, res, next) => {
     try {

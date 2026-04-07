@@ -9,6 +9,7 @@ router.get("/revenue-breakdown", analyticsController.getRevenueBreakdown);
 router.get("/payment-methods", analyticsController.getPaymentMethods);
 router.get("/trainer-performance", analyticsController.getTrainerPerformance);
 router.get("/member-growth", analyticsController.getMemberGrowth);
+router.get("/membership-duration-preference", analyticsController.getMembershipDurationPreference);
 router.get("/demographics", analyticsController.getDemographics);
 
 module.exports = router;
