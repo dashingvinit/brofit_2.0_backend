@@ -58,6 +58,7 @@ const config = {
     authToken: process.env.TWILIO_AUTH_TOKEN,
     whatsappFrom: process.env.TWILIO_WHATSAPP_FROM || 'whatsapp:+14155238886', // Twilio sandbox default
     welcomeTemplateSid: process.env.TWILIO_WELCOME_TEMPLATE_SID || null,
+    messagingServiceSid: process.env.TWILIO_MESSAGING_SERVICE_SID || null,
   },
 
   // Helper methods

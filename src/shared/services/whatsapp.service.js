@@ -52,12 +52,20 @@ async function sendWelcomeTemplate(toPhone, { memberName, gymName }) {
   }
 
   try {
-    await client.messages.create({
-      from: config.twilio.whatsappFrom,
+    const payload = {
       to: `whatsapp:${formatPhone(toPhone)}`,
       contentSid: config.twilio.welcomeTemplateSid,
       contentVariables: JSON.stringify({ 1: memberName, 2: gymName }),
-    });
+    };
+
+    // contentSid requires a Messaging Service SID — cannot use a bare `from` number
+    if (config.twilio.messagingServiceSid) {
+      payload.messagingServiceSid = config.twilio.messagingServiceSid;
+    } else {
+      payload.from = config.twilio.whatsappFrom;
+    }
+
+    await client.messages.create(payload);
     return true;
   } catch (err) {
     console.error(`[WhatsApp] Failed to send welcome template to ${toPhone}:`, err.message);
