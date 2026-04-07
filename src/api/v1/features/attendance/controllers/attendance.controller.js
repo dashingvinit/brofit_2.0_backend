@@ -99,11 +99,35 @@ class AttendanceController {
       if (!orgId) return;
 
       const { date } = req.query;
+      if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        return res.status(400).json({ success: false, message: "date must be YYYY-MM-DD" });
+      }
+
       const result = await attendanceService.getByDate(orgId, date);
 
       res.status(200).json({
         success: true,
         data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * GET /api/v1/attendance/peak-hours
+   * Returns today's hourly counts + historical avg per hour.
+   */
+  getPeakHoursData = async (req, res, next) => {
+    try {
+      const orgId = requireOrgId(req, res);
+      if (!orgId) return;
+
+      const data = await attendanceService.getPeakHoursData(orgId);
+
+      res.status(200).json({
+        success: true,
+        data,
       });
     } catch (error) {
       next(error);

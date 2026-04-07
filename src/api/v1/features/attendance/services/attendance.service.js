@@ -3,20 +3,13 @@ const memberRepository = require("../../member/repositories/member.repository");
 const { createError } = require("../../../../../shared/helpers/subscription.helper");
 
 class AttendanceService {
-  async _getMemberOrThrow(memberId, orgId) {
-    const member = await memberRepository.findOne({ id: memberId, orgId });
-    if (!member) {
-      throw createError("Member not found in this organization", 404);
-    }
-    return member;
-  }
-
   /**
    * Check in a member.
    * Prevents double check-in if they already have an open record today.
    */
   async checkIn(orgId, memberId, notes = null) {
-    await this._getMemberOrThrow(memberId, orgId);
+    const member = await memberRepository.findOne({ id: memberId, orgId });
+    if (!member) throw createError("Member not found in this organization", 404);
 
     const existing = await attendanceRepository.findOpenRecord(orgId, memberId);
     if (existing) {
@@ -27,7 +20,7 @@ class AttendanceService {
     const today = new Date(now);
     today.setHours(0, 0, 0, 0);
 
-    return await attendanceRepository.create({
+    const record = await attendanceRepository.create({
       orgId,
       memberId,
       entryTime: now,
@@ -35,26 +28,24 @@ class AttendanceService {
       date: today,
       notes: notes || null,
     });
+
+    // Fire-and-forget: update hourly snapshot (non-blocking)
+    attendanceRepository
+      .incrementHourlySnapshot(orgId, today, now.getHours())
+      .catch(() => {});
+
+    return record;
   }
 
   /**
    * Check out a member by their open attendance record ID.
    */
   async checkOut(orgId, attendanceId) {
-    const record = await attendanceRepository.get(attendanceId);
-    if (!record) {
-      throw createError("Attendance record not found", 404);
-    }
-    if (record.orgId !== orgId) {
-      throw createError("Attendance record not found", 404);
-    }
-    if (record.exitTime) {
-      throw createError("Member has already checked out", 409);
-    }
+    const record = await attendanceRepository.findOne({ id: attendanceId, orgId });
+    if (!record) throw createError("Attendance record not found", 404);
+    if (record.exitTime) throw createError("Member has already checked out", 409);
 
-    return await attendanceRepository.update(attendanceId, {
-      exitTime: new Date(),
-    });
+    return await attendanceRepository.update(attendanceId, { exitTime: new Date() });
   }
 
   /**
@@ -70,7 +61,7 @@ class AttendanceService {
    * Get attendance records for a specific date (defaults to today).
    */
   async getByDate(orgId, date) {
-    const targetDate = date ? new Date(date) : new Date();
+    const targetDate = date ? new Date(date + "T00:00:00") : new Date();
     const records = await attendanceRepository.findByDate(orgId, targetDate);
     const totalVisits = records.length;
     const currentlyInside = records.filter((r) => !r.exitTime).length;
@@ -81,12 +72,25 @@ class AttendanceService {
    * Get attendance history for a specific member.
    */
   async getMemberHistory(orgId, memberId, page = 1, limit = 20) {
-    await this._getMemberOrThrow(memberId, orgId);
+    const member = await memberRepository.findOne({ id: memberId, orgId });
+    if (!member) throw createError("Member not found in this organization", 404);
     const result = await attendanceRepository.findByMember(orgId, memberId, page, limit);
     return {
       records: result.data,
       pagination: result.pagination,
     };
+  }
+
+  /**
+   * Peak hours chart data: today's per-hour counts + historical avg per hour.
+   * avg is read from pre-computed snapshots — O(snapshot rows) not O(all records).
+   */
+  async getPeakHoursData(orgId) {
+    const [today, avg] = await Promise.all([
+      attendanceRepository.getTodayHourlyCounts(orgId),
+      attendanceRepository.getHourlyAvg(orgId),
+    ]);
+    return { today, avg };
   }
 
   /**

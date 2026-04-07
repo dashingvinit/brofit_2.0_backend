@@ -22,6 +22,7 @@ model Organization {
   expenses              Expense[]
   investments           Investment[]
   attendances           Attendance[]
+  attendanceHourlySnapshots AttendanceHourlySnapshot[]
   trainerPayouts        TrainerPayout[]
   notificationSettings  OrgNotificationSettings?
   staffPermissions      OrgStaffPermissions?
@@ -305,7 +306,23 @@ model Attendance {
   @@index([date])
   @@index([orgId, date])
   @@index([orgId, exitTime])
+  @@index([orgId, memberId, exitTime])
   @@map("attendances")
+}
+
+// Pre-computed daily hourly check-in counts for efficient avg queries
+model AttendanceHourlySnapshot {
+  id     String   @id @default(uuid())
+  orgId  String   @map("org_id")
+  date   DateTime @db.Date
+  hour   Int      // 0–23
+  count  Int      @default(0)
+
+  org    Organization @relation(fields: [orgId], references: [id])
+
+  @@unique([orgId, date, hour])
+  @@index([orgId])
+  @@map("attendance_hourly_snapshots")
 }
 
 // ─── Financials ───────────────────────────────────────────────────────────────

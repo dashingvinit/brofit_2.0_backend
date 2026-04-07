@@ -11,6 +11,7 @@ const router = express.Router();
 // Static routes first (before /:id)
 router.get("/inside", attendanceController.getCurrentlyInside);
 router.get("/stats", attendanceController.getTodayStats);
+router.get("/peak-hours", attendanceController.getPeakHoursData);
 router.get("/member/:memberId", attendanceController.getMemberHistory);
 
 // Date-filtered list: GET /api/v1/attendance?date=YYYY-MM-DD

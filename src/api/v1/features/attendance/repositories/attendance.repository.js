@@ -10,15 +10,8 @@ class AttendanceRepository extends CrudRepository {
    * Find the open (no exit) attendance record for a member today.
    */
   async findOpenRecord(orgId, memberId) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
     return await prisma.attendance.findFirst({
-      where: {
-        orgId,
-        memberId,
-        date: today,
-        exitTime: null,
-      },
+      where: { orgId, memberId, exitTime: null },
     });
   }
 
@@ -142,6 +135,64 @@ class AttendanceRepository extends CrudRepository {
     const day = new Date(date);
     day.setHours(0, 0, 0, 0);
     return await prisma.attendance.count({ where: { orgId, date: day } });
+  }
+
+  // ─── Hourly snapshot helpers ────────────────────────────────────────────────
+
+  /**
+   * Increment the snapshot count for a specific org/date/hour by 1.
+   * Creates the row if it doesn't exist yet (upsert).
+   */
+  async incrementHourlySnapshot(orgId, date, hour) {
+    const day = new Date(date);
+    day.setHours(0, 0, 0, 0);
+    await prisma.attendanceHourlySnapshot.upsert({
+      where: { orgId_date_hour: { orgId, date: day, hour } },
+      update: { count: { increment: 1 } },
+      create: { orgId, date: day, hour, count: 1 },
+    });
+  }
+
+  /**
+   * Average check-in count per hour across all recorded days.
+   * Returns 24 buckets: [{ hour: 0, avg: 1.2 }, ...]
+   */
+  async getHourlyAvg(orgId) {
+    // Raw query: AVG(count) per hour, grouped across all dates
+    const rows = await prisma.$queryRaw`
+      SELECT hour, AVG(count)::float AS avg
+      FROM attendance_hourly_snapshots
+      WHERE org_id = ${orgId}
+      GROUP BY hour
+      ORDER BY hour
+    `;
+
+    // Build a full 24-slot array with 0 for hours with no data
+    const map = Object.fromEntries(rows.map((r) => [r.hour, r.avg]));
+    return Array.from({ length: 24 }, (_, h) => ({
+      hour: h,
+      avg: map[h] ? parseFloat(map[h].toFixed(2)) : 0,
+    }));
+  }
+
+  /**
+   * Today's per-hour check-in counts directly from the attendance table.
+   * Returns 24 buckets: [{ hour: 0, count: 3 }, ...]
+   */
+  async getTodayHourlyCounts(orgId) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const records = await prisma.attendance.findMany({
+      where: { orgId, date: today },
+      select: { entryTime: true },
+    });
+
+    const buckets = Array(24).fill(0);
+    for (const r of records) {
+      buckets[new Date(r.entryTime).getHours()]++;
+    }
+    return buckets.map((count, hour) => ({ hour, count }));
   }
 }
 
