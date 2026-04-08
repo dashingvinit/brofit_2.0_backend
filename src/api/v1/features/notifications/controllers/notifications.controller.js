@@ -128,6 +128,30 @@ class NotificationsController {
   };
 
   /**
+   * POST /notifications/ping/:memberId
+   * Manually send a WhatsApp reminder to a single member.
+   * Body: { type: "dues" | "no-subscription" }
+   */
+  pingMember = async (req, res, next) => {
+    try {
+      const orgId = requireOrgId(req, res);
+      if (!orgId) return;
+
+      const { memberId } = req.params;
+      const { type } = req.body;
+
+      if (!type || !["dues", "no-subscription"].includes(type)) {
+        return res.status(400).json({ success: false, message: 'type must be "dues" or "no-subscription"' });
+      }
+
+      const data = await notificationsService.pingMember(orgId, memberId, type);
+      res.status(200).json({ success: true, data });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
    * POST /notifications/reset-welcome
    * Clears welcomeSentAt so members are eligible for the welcome message again.
    * Body: { memberIds?: string[] }  — omit to reset all members in the org.

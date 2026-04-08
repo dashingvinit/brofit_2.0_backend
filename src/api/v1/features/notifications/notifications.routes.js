@@ -33,6 +33,10 @@ router.get("/welcome-status", notificationsController.getWelcomeStatus);
 // POST /notifications/send-welcome-test — send welcome template to a specific phone number
 router.post("/send-welcome-test", notificationsController.sendWelcomeTest);
 
+// POST /notifications/ping/:memberId — manually send a WhatsApp reminder to one member
+// Body: { type: "dues" | "no-subscription" }
+router.post("/ping/:memberId", notificationsController.pingMember);
+
 // POST /notifications/reset-welcome — clear welcomeSentAt to allow resending
 // Body: { memberIds?: string[] } — omit memberIds to reset all members in the org
 router.post("/reset-welcome", notificationsController.resetWelcome);

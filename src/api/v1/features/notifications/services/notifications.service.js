@@ -1,5 +1,5 @@
 const notificationsRepository = require("../repositories/notifications.repository");
-const { sendWhatsApp, sendWhatsAppBulk, sendWelcomeTemplate, getTwilioClient, DEFAULT_WELCOME_MESSAGE } = require("../../../../../shared/services/whatsapp.service");
+const { sendWhatsApp, sendWhatsAppBulk, sendWelcomeTemplate, sendRenewalTemplate, sendDuesTemplate, getTwilioClient, DEFAULT_WELCOME_MESSAGE } = require("../../../../../shared/services/whatsapp.service");
 const { prisma } = require("../../../../../config/prisma.config");
 const config = require("../../../../../config/env.config");
 
@@ -207,6 +207,77 @@ class NotificationsService {
     ]);
 
     return { notSent, sentNotOptedIn, optedIn, total: notSent + sentNotOptedIn + optedIn };
+  }
+
+  /**
+   * Manually ping a single member via WhatsApp.
+   * - If they have pending dues → sends dues reminder template
+   * - If they have no active membership → sends renewal reminder template (with "expired" framing)
+   * - If they have an active membership expiring soon → sends renewal reminder template
+   * type: "dues" | "no-subscription" — passed from the frontend so we know which card triggered it
+   */
+  async pingMember(orgId, memberId, type) {
+    const client = getTwilioClient();
+    if (!client) {
+      throw Object.assign(new Error("Twilio is not configured on the server."), { statusCode: 502 });
+    }
+
+    const member = await prisma.member.findFirst({
+      where: { id: memberId, orgId },
+      select: {
+        id: true, firstName: true, phone: true,
+        payments: {
+          where: { status: "pending", orgId },
+          select: { amount: true },
+        },
+        memberships: {
+          where: { orgId, status: { in: ["active", "expired"] } },
+          orderBy: { endDate: "desc" },
+          take: 1,
+          select: {
+            endDate: true, status: true,
+            planVariant: { select: { planType: { select: { name: true } } } },
+          },
+        },
+      },
+    });
+
+    if (!member) {
+      throw Object.assign(new Error("Member not found."), { statusCode: 404 });
+    }
+    if (!member.phone) {
+      throw Object.assign(new Error("Member has no phone number."), { statusCode: 400 });
+    }
+
+    if (type === "dues") {
+      const totalDue = member.payments.reduce((sum, p) => sum + Number(p.amount), 0);
+      if (totalDue <= 0) {
+        throw Object.assign(new Error("Member has no pending dues."), { statusCode: 400 });
+      }
+      const sid = await sendDuesTemplate(member.phone, {
+        memberName: member.firstName,
+        amount: `₹${totalDue.toLocaleString("en-IN")}`,
+      });
+      if (!sid) throw Object.assign(new Error("Failed to send. Check TWILIO_DUES_TEMPLATE_SID."), { statusCode: 502 });
+      return { sent: true, type: "dues" };
+    }
+
+    // type === "no-subscription" — use renewal template with days=0 to signal lapsed
+    const lastMembership = member.memberships[0];
+    const planName = lastMembership?.planVariant?.planType?.name ?? "membership";
+    const expiryDate = lastMembership
+      ? new Date(lastMembership.endDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })
+      : "—";
+    const daysLeft = lastMembership ? Math.ceil((new Date(lastMembership.endDate) - new Date()) / 86400000) : 0;
+
+    const sid = await sendRenewalTemplate(member.phone, {
+      memberName: member.firstName,
+      planName,
+      daysLeft: daysLeft < 0 ? 0 : daysLeft,
+      expiryDate,
+    });
+    if (!sid) throw Object.assign(new Error("Failed to send. Check TWILIO_RENEWAL_TEMPLATE_SID."), { statusCode: 502 });
+    return { sent: true, type: "no-subscription" };
   }
 
   /**
