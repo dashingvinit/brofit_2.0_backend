@@ -57,7 +57,7 @@ class MemberRepository extends CrudRepository {
       limit,
       orderBy: { createdAt: "desc" },
       include: {
-        organization: true,
+        organization: { select: { id: true, name: true } },
       },
     });
   }

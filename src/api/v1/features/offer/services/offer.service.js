@@ -6,8 +6,9 @@ const VALID_TYPES = ["event", "referral", "discount", "promo"];
 const VALID_DISCOUNT_TYPES = ["flat", "percentage"];
 
 class OfferService {
-  async getAllOffers(orgId, filters = {}) {
-    return await offerRepository.findByOrganization(orgId, filters);
+  async getAllOffers(orgId, filters = {}, page = 1, limit = 20) {
+    const result = await offerRepository.findByOrganization(orgId, filters, page, limit);
+    return { offers: result.data, pagination: result.pagination };
   }
 
   async getOfferById(id) {

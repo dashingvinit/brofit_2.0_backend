@@ -7,12 +7,14 @@ class OfferRepository extends CrudRepository {
     super(prisma.offer);
   }
 
-  async findByOrganization(orgId, filters = {}) {
+  async findByOrganization(orgId, filters = {}, page = 1, limit = 20) {
     const where = { orgId };
     if (filters.type) where.type = filters.type;
     if (filters.isActive !== undefined) where.isActive = filters.isActive;
 
-    return await this.find(where, {
+    return await this.findWithPagination(where, {
+      page,
+      limit,
       orderBy: { createdAt: "desc" },
     });
   }

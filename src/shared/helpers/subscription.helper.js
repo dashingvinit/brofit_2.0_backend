@@ -153,13 +153,12 @@ async function resolveOfferDiscount(offerId, orgId, planVariantPrice) {
 }
 
 /**
- * Returns a new Date set to midnight (00:00:00.000) of the given date (local time).
- * Pass no argument to get the start of today.
+ * Returns a new Date set to midnight (00:00:00.000) UTC of the given date.
+ * Pass no argument to get the start of today UTC.
  */
 function startOfDay(date) {
   const d = date ? new Date(date) : new Date();
-  d.setHours(0, 0, 0, 0);
-  return d;
+  return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 0, 0, 0, 0));
 }
 
 /**

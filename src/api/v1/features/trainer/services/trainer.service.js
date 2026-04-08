@@ -29,8 +29,12 @@ class TrainerService {
     return await trainerRepository.findByOrganization(orgId);
   }
 
-  async getTrainerById(trainerId) {
-    return await this._getTrainerOrThrow(trainerId);
+  async getTrainerById(trainerId, orgId = null) {
+    const trainer = await this._getTrainerOrThrow(trainerId);
+    if (orgId && trainer.orgId !== orgId) {
+      throw createError("Trainer not found", 404);
+    }
+    return trainer;
   }
 
   async updateTrainer(trainerId, updateData) {

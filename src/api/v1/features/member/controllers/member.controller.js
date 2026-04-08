@@ -75,8 +75,11 @@ class MemberController {
 
   getMemberById = async (req, res, next) => {
     try {
+      const orgId = requireOrgId(req, res);
+      if (!orgId) return;
+
       const { id } = req.params;
-      const member = await memberService.getMemberById(id);
+      const member = await memberService.getMemberById(id, orgId);
 
       res.status(200).json({
         success: true,

@@ -41,8 +41,11 @@ class TrainerController {
 
   getTrainerById = async (req, res, next) => {
     try {
+      const orgId = requireOrgId(req, res);
+      if (!orgId) return;
+
       const { id } = req.params;
-      const trainer = await trainerService.getTrainerById(id);
+      const trainer = await trainerService.getTrainerById(id, orgId);
 
       res.status(200).json({
         success: true,

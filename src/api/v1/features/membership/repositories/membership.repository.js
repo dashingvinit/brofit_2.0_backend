@@ -12,7 +12,15 @@ class MembershipRepository extends CrudRepository {
       { memberId },
       {
         orderBy: { createdAt: "desc" },
-        include: { planVariant: { include: { planType: true } }, payments: true },
+        include: {
+          planVariant: {
+            select: {
+              id: true, durationLabel: true, durationDays: true, price: true,
+              planType: { select: { id: true, name: true, category: true } },
+            },
+          },
+          payments: { select: { id: true, amount: true, method: true, status: true, paidAt: true, createdAt: true } },
+        },
         ...options,
       },
     );
@@ -35,9 +43,14 @@ class MembershipRepository extends CrudRepository {
       limit,
       orderBy: { createdAt: "desc" },
       include: {
-        member: true,
-        planVariant: { include: { planType: true } },
-        payments: true,
+        member: { select: { id: true, firstName: true, lastName: true, phone: true, email: true } },
+        planVariant: {
+          select: {
+            id: true, durationLabel: true, durationDays: true, price: true,
+            planType: { select: { id: true, name: true, category: true } },
+          },
+        },
+        payments: { select: { id: true, amount: true, method: true, status: true, paidAt: true } },
       },
     });
   }
@@ -46,8 +59,13 @@ class MembershipRepository extends CrudRepository {
     return await this.model.findUnique({
       where: { id },
       include: {
-        member: true,
-        planVariant: { include: { planType: true } },
+        member: { select: { id: true, firstName: true, lastName: true, phone: true, email: true } },
+        planVariant: {
+          select: {
+            id: true, durationLabel: true, durationDays: true, price: true,
+            planType: { select: { id: true, name: true, category: true } },
+          },
+        },
         payments: { orderBy: { createdAt: "desc" } },
       },
     });
@@ -55,15 +73,16 @@ class MembershipRepository extends CrudRepository {
 
   async findActiveMembership(memberId, orgId) {
     return await this.findOne(
-      {
-        memberId,
-        orgId,
-        status: "active",
-      },
+      { memberId, orgId, status: "active" },
       {
         include: {
-          planVariant: { include: { planType: true } },
-          payments: true,
+          planVariant: {
+            select: {
+              id: true, durationLabel: true, durationDays: true, price: true,
+              planType: { select: { id: true, name: true, category: true } },
+            },
+          },
+          payments: { select: { id: true, amount: true, method: true, status: true, paidAt: true } },
         },
       },
     );
@@ -83,7 +102,15 @@ class MembershipRepository extends CrudRepository {
       },
       {
         orderBy: { endDate: "asc" },
-        include: { member: true, planVariant: { include: { planType: true } } },
+        include: {
+          member: { select: { id: true, firstName: true, lastName: true, phone: true } },
+          planVariant: {
+            select: {
+              id: true, durationLabel: true,
+              planType: { select: { id: true, name: true, category: true } },
+            },
+          },
+        },
       },
     );
   }

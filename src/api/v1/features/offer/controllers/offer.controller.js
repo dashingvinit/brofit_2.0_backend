@@ -17,11 +17,15 @@ class OfferController {
         filters.isActive = req.query.isActive === "true";
       }
 
-      const offers = await offerService.getAllOffers(orgId, filters);
+      const page = parseInt(req.query.page) || 1;
+      const limit = Math.min(parseInt(req.query.limit) || 20, 100);
+
+      const result = await offerService.getAllOffers(orgId, filters, page, limit);
 
       res.status(200).json({
         success: true,
-        data: offers,
+        data: result.offers,
+        pagination: result.pagination,
       });
     } catch (error) {
       next(error);

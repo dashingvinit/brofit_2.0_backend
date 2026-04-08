@@ -90,8 +90,11 @@ class PlanController {
    */
   getPlanTypeById = async (req, res, next) => {
     try {
+      const orgId = requireOrgId(req, res);
+      if (!orgId) return;
+
       const { id } = req.params;
-      const planType = await planTypeService.getPlanTypeById(id);
+      const planType = await planTypeService.getPlanTypeById(id, true, orgId);
 
       res.status(200).json({
         success: true,
@@ -311,13 +314,6 @@ class PlanController {
    * Bulk import plan types + variants from CSV rows.
    * POST /api/v1/plans/import
    * Body: { rows: Array<Record<string, string>> }
-   *
-   * Expected CSV columns:
-   *   Plan Name, Category (membership|training), Description,
-   *   Duration Label, Duration Days, Price, Plan Active, Variant Active
-   *
-   * Rows sharing the same Plan Name are grouped: the first occurrence creates
-   * the plan type (if it doesn't already exist) and every row adds a variant.
    */
   importPlans = async (req, res, next) => {
     try {
@@ -332,116 +328,8 @@ class PlanController {
         });
       }
 
-      const errors = [];
-      let importedTypes = 0;
-      let importedVariants = 0;
-      // Cache created/found plan type IDs by name to avoid duplicate creates
-      const planTypeCache = {};
-
-      for (let i = 0; i < rows.length; i++) {
-        const row = rows[i];
-        const rowNum = i + 1;
-
-        const planName = (row["Plan Name"] || row["planName"] || "").trim();
-        const rawCategory = (
-          row["Category"] ||
-          row["category"] ||
-          ""
-        )
-          .trim()
-          .toLowerCase();
-        const description =
-          (row["Description"] || row["description"] || "").trim() || null;
-        const durationLabel = (
-          row["Duration Label"] ||
-          row["durationLabel"] ||
-          ""
-        ).trim();
-        const durationDays = parseInt(
-          row["Duration Days"] || row["durationDays"] || "0",
-          10,
-        );
-        const price = parseFloat(row["Price"] || row["price"] || "0");
-        const planActive =
-          (row["Plan Active"] || row["planActive"] || "true").toLowerCase() !==
-          "false";
-        const variantActive =
-          (
-            row["Variant Active"] ||
-            row["variantActive"] ||
-            "true"
-          ).toLowerCase() !== "false";
-
-        if (!planName) {
-          errors.push(`Row ${rowNum}: Plan Name is required`);
-          continue;
-        }
-
-        if (!["membership", "training"].includes(rawCategory)) {
-          errors.push(
-            `Row ${rowNum} (${planName}): Category must be 'membership' or 'training'`,
-          );
-          continue;
-        }
-
-        if (!durationLabel) {
-          errors.push(
-            `Row ${rowNum} (${planName}): Duration Label is required`,
-          );
-          continue;
-        }
-
-        if (isNaN(durationDays) || durationDays <= 0) {
-          errors.push(
-            `Row ${rowNum} (${planName}): Duration Days must be a positive number`,
-          );
-          continue;
-        }
-
-        if (isNaN(price) || price < 0) {
-          errors.push(
-            `Row ${rowNum} (${planName}): Price must be a non-negative number`,
-          );
-          continue;
-        }
-
-        try {
-          // Get or create the plan type
-          let planTypeId = planTypeCache[planName];
-          if (!planTypeId) {
-            const existing = await planTypeService.getAllPlanTypes(orgId, true);
-            const found = existing.find(
-              (pt) => pt.name.toLowerCase() === planName.toLowerCase(),
-            );
-            if (found) {
-              planTypeId = found.id;
-            } else {
-              const created = await planTypeService.createPlanType({
-                orgId,
-                name: planName,
-                description,
-                category: rawCategory,
-                isActive: planActive,
-              });
-              planTypeId = created.id;
-              importedTypes++;
-            }
-            planTypeCache[planName] = planTypeId;
-          }
-
-          // Create the variant
-          await planVariantService.createVariant({
-            planTypeId,
-            durationDays,
-            durationLabel,
-            price,
-            isActive: variantActive,
-          });
-          importedVariants++;
-        } catch (err) {
-          errors.push(`Row ${rowNum} (${planName}): ${err.message}`);
-        }
-      }
+      const { importedTypes, importedVariants, errors } =
+        await planTypeService.importPlans(orgId, rows);
 
       res.status(200).json({
         success: true,

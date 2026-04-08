@@ -13,7 +13,7 @@ class PlanVariantService {
 
   async createVariant(variantData) {
     if (!variantData.planTypeId) {
-      throw new Error("Plan type ID is required");
+      throw createError("Plan type ID is required", 400);
     }
 
     await planTypeService.getPlanTypeById(variantData.planTypeId, false);
@@ -31,7 +31,7 @@ class PlanVariantService {
     if (includePlanType) {
       const variant = await planVariantRepository.findByIdWithPlanType(variantId);
       if (!variant) {
-        throw new Error("Plan variant not found");
+        throw createError("Plan variant not found", 404);
       }
       return variant;
     }

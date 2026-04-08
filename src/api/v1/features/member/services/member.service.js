@@ -88,14 +88,20 @@ class MemberService {
             });
           }
         }
-      }).catch(() => {});
+      }).catch((err) => {
+        console.error(`[WhatsApp] Failed to send welcome message to member ${member.id}:`, err?.message || err);
+      });
     }
 
     return member;
   }
 
-  async getMemberById(memberId) {
-    return await this._getMemberOrThrow(memberId);
+  async getMemberById(memberId, orgId = null) {
+    const member = await this._getMemberOrThrow(memberId);
+    if (orgId && member.orgId !== orgId) {
+      throw createError("Member not found", 404);
+    }
+    return member;
   }
 
   async getAllMembers(organizationId, page = 1, limit = 10, isActive = null, joinedFrom = null, joinedTo = null) {

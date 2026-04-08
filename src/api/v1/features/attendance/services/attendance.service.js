@@ -30,8 +30,10 @@ class AttendanceService {
 
     // Fire-and-forget: update hourly snapshot (non-blocking)
     attendanceRepository
-      .incrementHourlySnapshot(orgId, today, now.getHours())
-      .catch(() => {});
+      .incrementHourlySnapshot(orgId, today, now.getUTCHours())
+      .catch((err) => {
+        console.error(`[Attendance] Failed to update hourly snapshot for org ${orgId}:`, err?.message || err);
+      });
 
     return record;
   }
@@ -60,7 +62,7 @@ class AttendanceService {
    * Get attendance records for a specific date (defaults to today).
    */
   async getByDate(orgId, date) {
-    const targetDate = date ? new Date(date + "T00:00:00") : new Date();
+    const targetDate = date ? new Date(date + "T00:00:00Z") : new Date();
     const records = await attendanceRepository.findByDate(orgId, targetDate);
     const totalVisits = records.length;
     const currentlyInside = records.filter((r) => !r.exitTime).length;
