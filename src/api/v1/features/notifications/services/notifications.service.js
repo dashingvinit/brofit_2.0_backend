@@ -1,5 +1,5 @@
 const notificationsRepository = require("../repositories/notifications.repository");
-const { sendWhatsApp, sendWhatsAppBulk, sendWelcomeTemplate, getTwilioClient, formatPhone, DEFAULT_WELCOME_MESSAGE } = require("../../../../../shared/services/whatsapp.service");
+const { sendWhatsApp, sendWhatsAppBulk, sendWelcomeTemplate, getTwilioClient, DEFAULT_WELCOME_MESSAGE } = require("../../../../../shared/services/whatsapp.service");
 const { prisma } = require("../../../../../config/prisma.config");
 const config = require("../../../../../config/env.config");
 
@@ -47,26 +47,22 @@ class NotificationsService {
       throw Object.assign(new Error("No owner WhatsApp number configured."), { statusCode: 400 });
     }
 
-    const client = getTwilioClient();
-    if (!client) {
-      throw Object.assign(new Error("Twilio is not configured on the server (missing credentials in .env)."), { statusCode: 502 });
+    if (!config.twilio.welcomeTemplateSid) {
+      throw Object.assign(new Error("TWILIO_WELCOME_TEMPLATE_SID is not configured. Add it to your .env to send template messages."), { statusCode: 502 });
     }
 
-    const body =
-      `✅ *Brofit 2.0 — Test Message*\n\n` +
-      `WhatsApp notifications are working correctly for your gym.\n\n` +
-      `_Powered by Brofit 2.0_`;
+    const org = await prisma.organization.findUnique({ where: { id: orgId }, select: { name: true } });
+    const gymName = org?.name || "Our Gym";
 
-    try {
-      await client.messages.create({
-        from: config.twilio.whatsappFrom,
-        to: `whatsapp:${formatPhone(settings.ownerWhatsapp)}`,
-        body,
-      });
-    } catch (err) {
-      // Twilio RestException — surface the real reason as a 400 so it reaches the frontend
-      const twilioMsg = err.message ?? "Unknown Twilio error";
-      throw Object.assign(new Error(`Twilio: ${twilioMsg}`), { statusCode: 400 });
+    // Send the welcome template (not free-form) — free-form requires the member to have
+    // first replied to a template message, which the owner may not have done yet.
+    const sid = await sendWelcomeTemplate(settings.ownerWhatsapp, {
+      memberName: "Owner",
+      gymName,
+    });
+
+    if (!sid) {
+      throw Object.assign(new Error("Failed to send. Check your Twilio credentials and template SID."), { statusCode: 502 });
     }
 
     return { sent: true };
@@ -143,15 +139,30 @@ class NotificationsService {
     let failed = 0;
     const DELAY_MS = Math.ceil(1000 / 60); // 60 messages/sec — safe under 80/sec limit
 
+    // Build the statusCallback URL so Twilio posts delivery confirmations back to us.
+    // When set, welcomeSentAt is stamped by the webhook on confirmed delivery, not here.
+    // Falls back to stamping here (optimistic) when no PUBLIC_API_URL is configured.
+    const statusCallbackUrl = config.server.publicUrl
+      ? `${config.server.publicUrl}/api/v1/webhooks/whatsapp/status`
+      : null;
+
     for (const member of members) {
-      const ok = await sendWelcomeTemplate(member.phone, { memberName: member.firstName, gymName });
-      if (ok) {
+      const sid = await sendWelcomeTemplate(member.phone, {
+        memberName: member.firstName,
+        gymName,
+        statusCallbackUrl,
+      });
+
+      if (sid) {
         sent++;
-        // Stamp the time so we don't resend
-        await prisma.member.update({
-          where: { id: member.id },
-          data: { welcomeSentAt: new Date() },
-        });
+        if (!statusCallbackUrl) {
+          // No webhook configured — stamp optimistically (best-effort)
+          await prisma.member.update({
+            where: { id: member.id },
+            data: { welcomeSentAt: new Date() },
+          });
+        }
+        // When statusCallbackUrl is set, the webhook stamps welcomeSentAt on delivery
       } else {
         failed++;
       }
@@ -175,8 +186,8 @@ class NotificationsService {
     }
     const org = await prisma.organization.findUnique({ where: { id: orgId }, select: { name: true } });
     const gymName = org?.name || "Our Gym";
-    const ok = await sendWelcomeTemplate(phone, { memberName: "Test", gymName });
-    if (!ok) {
+    const sid = await sendWelcomeTemplate(phone, { memberName: "Test", gymName });
+    if (!sid) {
       throw Object.assign(new Error("Failed to send. Check your Twilio credentials and template SID."), { statusCode: 502 });
     }
     return { sent: true, to: phone };
@@ -196,6 +207,24 @@ class NotificationsService {
     ]);
 
     return { notSent, sentNotOptedIn, optedIn, total: notSent + sentNotOptedIn + optedIn };
+  }
+
+  /**
+   * Reset welcomeSentAt to null so members can receive the welcome message again.
+   * If memberIds is provided, only resets those specific members.
+   * If memberIds is omitted, resets ALL members in the org (full retry).
+   */
+  async resetWelcome(orgId, memberIds = null) {
+    const where = memberIds?.length
+      ? { orgId, id: { in: memberIds } }
+      : { orgId };
+
+    const result = await prisma.member.updateMany({
+      where,
+      data: { welcomeSentAt: null },
+    });
+
+    return { reset: result.count };
   }
 
   /**

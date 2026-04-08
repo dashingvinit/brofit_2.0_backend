@@ -38,6 +38,9 @@ const config = {
     env: process.env.NODE_ENV || 'development',
     port: parseInt(process.env.PORT, 10) || 5000,
     apiVersion: process.env.API_VERSION || 'v1',
+    // Public-facing URL (no trailing slash) — required for Twilio statusCallback webhooks
+    // e.g. https://api.yourapp.com  or an ngrok URL in dev
+    publicUrl: process.env.PUBLIC_API_URL || null,
   },
 
   // Clerk authentication
@@ -58,6 +61,8 @@ const config = {
     authToken: process.env.TWILIO_AUTH_TOKEN,
     whatsappFrom: process.env.TWILIO_WHATSAPP_FROM || 'whatsapp:+14155238886', // Twilio sandbox default
     welcomeTemplateSid: process.env.TWILIO_WELCOME_TEMPLATE_SID || null,
+    renewalTemplateSid: process.env.TWILIO_RENEWAL_TEMPLATE_SID || null,
+    duesTemplateSid: process.env.TWILIO_DUES_TEMPLATE_SID || null,
     messagingServiceSid: process.env.TWILIO_MESSAGING_SERVICE_SID || null,
   },
 

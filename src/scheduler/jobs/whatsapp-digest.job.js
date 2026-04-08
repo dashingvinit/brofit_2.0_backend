@@ -1,4 +1,4 @@
-const { getTwilioClient, formatPhone } = require("../../shared/services/whatsapp.service");
+const { getTwilioClient, formatPhone, sendRenewalTemplate, sendDuesTemplate } = require("../../shared/services/whatsapp.service");
 const config = require("../../config/env.config");
 const notificationsRepository = require("../../api/v1/features/notifications/repositories/notifications.repository");
 const reportsRepository = require("../../api/v1/features/reports/repositories/reports.repository");
@@ -51,38 +51,34 @@ function buildDigestMessage(orgName, expiringSoon, expiredRecently, pendingDues)
   return lines.join("\n");
 }
 
-async function sendMemberReminder(client, fromNumber, member, membership, daysBefore) {
+async function sendMemberReminder(member, membership, daysBefore) {
   const date = new Date(membership.endDate).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
   const planName = membership.planVariant?.planType?.name ?? "membership";
 
-  const body =
-    `Hi ${member.firstName}! 👋\n\n` +
-    `Your *${planName}* expires in *${daysBefore} day(s)* (${date}).\n\n` +
-    `Please contact us to renew and continue uninterrupted access.\n\n` +
-    `_Brofit 2.0_`;
-
-  await client.messages.create({
-    from: fromNumber,
-    to: `whatsapp:${formatPhone(member.phone)}`,
-    body,
+  const sid = await sendRenewalTemplate(member.phone, {
+    memberName: member.firstName,
+    planName,
+    daysLeft: daysBefore,
+    expiryDate: date,
   });
+
+  if (!sid) {
+    throw new Error("sendRenewalTemplate returned null — check TWILIO_RENEWAL_TEMPLATE_SID");
+  }
 }
 
-async function sendDuesReminder(client, fromNumber, payment) {
+async function sendDuesReminder(payment) {
   const name = `${payment.member.firstName} ${payment.member.lastName}`;
-  const amount = payment.amount.toLocaleString("en-IN");
+  const amount = `₹${payment.amount.toLocaleString("en-IN")}`;
 
-  const body =
-    `Hi ${payment.member.firstName}! 👋\n\n` +
-    `This is a friendly reminder that you have a pending payment of *₹${amount}* with us.\n\n` +
-    `Please clear your dues at the earliest to avoid any inconvenience.\n\n` +
-    `_Brofit 2.0_`;
-
-  await client.messages.create({
-    from: fromNumber,
-    to: `whatsapp:${formatPhone(payment.member.phone)}`,
-    body,
+  const sid = await sendDuesTemplate(payment.member.phone, {
+    memberName: payment.member.firstName,
+    amount,
   });
+
+  if (!sid) {
+    throw new Error("sendDuesTemplate returned null — check TWILIO_DUES_TEMPLATE_SID");
+  }
 
   console.log(`[WhatsApp] ✓ Dues reminder sent to ${name}`);
 }
@@ -150,15 +146,11 @@ const run = async () => {
         );
 
         for (const membership of toRemind) {
-          if (!membership.member.whatsappOptedIn) {
-            console.log(`[WhatsApp] Skipping reminder — ${membership.member.firstName} has not opted in.`);
-            continue;
-          }
           try {
-            await sendMemberReminder(client, fromNumber, membership.member, membership, days);
-            console.log(`[WhatsApp] ✓ Reminder sent to ${membership.member.firstName} (org ${orgId})`);
+            await sendMemberReminder(membership.member, membership, days);
+            console.log(`[WhatsApp] ✓ Renewal reminder sent to ${membership.member.firstName} (org ${orgId})`);
           } catch (err) {
-            console.error(`[WhatsApp] ✗ Reminder failed for member ${membership.memberId}:`, err.message);
+            console.error(`[WhatsApp] ✗ Renewal reminder failed for member ${membership.memberId}:`, err.message);
           }
         }
       }
@@ -173,12 +165,8 @@ const run = async () => {
         for (const payment of pendingPayments) {
           if (!payment.member.phone || seen.has(payment.memberId)) continue;
           seen.add(payment.memberId);
-          if (!payment.member.whatsappOptedIn) {
-            console.log(`[WhatsApp] Skipping dues reminder — ${payment.member.firstName} has not opted in.`);
-            continue;
-          }
           try {
-            await sendDuesReminder(client, fromNumber, payment);
+            await sendDuesReminder(payment);
           } catch (err) {
             console.error(`[WhatsApp] ✗ Dues reminder failed for member ${payment.memberId}:`, err.message);
           }

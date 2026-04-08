@@ -2,6 +2,7 @@ const memberRepository = require("../repositories/member.repository");
 const { prisma } = require("../../../../../config/prisma.config");
 const { createError, executeBatch } = require("../../../../../shared/helpers/subscription.helper");
 const { sendWelcomeTemplate } = require("../../../../../shared/services/whatsapp.service");
+const config = require("../../../../../config/env.config");
 const notificationsRepository = require("../../notifications/repositories/notifications.repository");
 
 class MemberService {
@@ -70,11 +71,17 @@ class MemberService {
       notificationsRepository.getSettings(memberData.orgId).then(async (settings) => {
         if (settings?.welcomeEnabled) {
           const gymName = org?.name || `Organization`;
-          const ok = await sendWelcomeTemplate(member.phone, {
+          const statusCallbackUrl = config.server.publicUrl
+            ? `${config.server.publicUrl}/api/v1/webhooks/whatsapp/status`
+            : null;
+          const sid = await sendWelcomeTemplate(member.phone, {
             memberName: member.firstName,
             gymName,
+            statusCallbackUrl,
           });
-          if (ok) {
+          // Only stamp when statusCallback is not configured (no webhook to confirm delivery).
+          // When statusCallbackUrl is set, the webhook stamps welcomeSentAt on confirmed delivery.
+          if (sid && !statusCallbackUrl) {
             await prisma.member.update({
               where: { id: member.id },
               data: { welcomeSentAt: new Date() },

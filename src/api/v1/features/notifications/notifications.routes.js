@@ -33,4 +33,8 @@ router.get("/welcome-status", notificationsController.getWelcomeStatus);
 // POST /notifications/send-welcome-test — send welcome template to a specific phone number
 router.post("/send-welcome-test", notificationsController.sendWelcomeTest);
 
+// POST /notifications/reset-welcome — clear welcomeSentAt to allow resending
+// Body: { memberIds?: string[] } — omit memberIds to reset all members in the org
+router.post("/reset-welcome", notificationsController.resetWelcome);
+
 module.exports = router;

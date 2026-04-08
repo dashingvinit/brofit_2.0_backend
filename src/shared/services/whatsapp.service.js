@@ -37,18 +37,24 @@ function formatPhone(phone) {
  * Send a welcome template message to a new member.
  * Uses Twilio Content Template API so it works in production (not just sandbox).
  * Variables: {{1}} = member first name, {{2}} = gym/org name
- * Returns true on success, false on failure. Never throws.
+ *
+ * IMPORTANT: Twilio returns HTTP 201 (accepted) even when a template is not yet approved.
+ * The real delivery failure arrives asynchronously via statusCallback webhook.
+ * Callers should NOT stamp welcomeSentAt on this return value alone if accuracy matters —
+ * instead rely on the statusCallback webhook to stamp on confirmed delivery.
+ *
+ * Returns the Twilio message SID on success, null on failure. Never throws.
  */
-async function sendWelcomeTemplate(toPhone, { memberName, gymName }) {
+async function sendWelcomeTemplate(toPhone, { memberName, gymName, statusCallbackUrl = null }) {
   const client = getTwilioClient();
   if (!client) {
     console.warn("[WhatsApp] Twilio not configured — welcome template skipped.");
-    return false;
+    return null;
   }
 
   if (!config.twilio.welcomeTemplateSid) {
     console.warn("[WhatsApp] TWILIO_WELCOME_TEMPLATE_SID not set — welcome template skipped.");
-    return false;
+    return null;
   }
 
   try {
@@ -65,11 +71,15 @@ async function sendWelcomeTemplate(toPhone, { memberName, gymName }) {
       payload.from = config.twilio.whatsappFrom;
     }
 
-    await client.messages.create(payload);
-    return true;
+    if (statusCallbackUrl) {
+      payload.statusCallback = statusCallbackUrl;
+    }
+
+    const message = await client.messages.create(payload);
+    return message.sid;
   } catch (err) {
     console.error(`[WhatsApp] Failed to send welcome template to ${toPhone}:`, err.message);
-    return false;
+    return null;
   }
 }
 
@@ -122,11 +132,89 @@ async function sendWhatsAppBulk(recipients, buildMessage) {
   return { sent, failed, skipped };
 }
 
+/**
+ * Send a renewal reminder template to a member.
+ * Variables: {{1}} = member first name, {{2}} = plan name, {{3}} = days until expiry, {{4}} = expiry date
+ * Returns the message SID on success, null on failure. Never throws.
+ */
+async function sendRenewalTemplate(toPhone, { memberName, planName, daysLeft, expiryDate }) {
+  const client = getTwilioClient();
+  if (!client) {
+    console.warn("[WhatsApp] Twilio not configured — renewal template skipped.");
+    return null;
+  }
+
+  if (!config.twilio.renewalTemplateSid) {
+    console.warn("[WhatsApp] TWILIO_RENEWAL_TEMPLATE_SID not set — renewal template skipped.");
+    return null;
+  }
+
+  try {
+    const payload = {
+      to: `whatsapp:${formatPhone(toPhone)}`,
+      contentSid: config.twilio.renewalTemplateSid,
+      contentVariables: JSON.stringify({ 1: memberName, 2: planName, 3: String(daysLeft), 4: expiryDate }),
+    };
+
+    if (config.twilio.messagingServiceSid) {
+      payload.messagingServiceSid = config.twilio.messagingServiceSid;
+    } else {
+      payload.from = config.twilio.whatsappFrom;
+    }
+
+    const message = await client.messages.create(payload);
+    return message.sid;
+  } catch (err) {
+    console.error(`[WhatsApp] Failed to send renewal template to ${toPhone}:`, err.message);
+    return null;
+  }
+}
+
+/**
+ * Send a dues reminder template to a member.
+ * Variables: {{1}} = member first name, {{2}} = amount (formatted)
+ * Returns the message SID on success, null on failure. Never throws.
+ */
+async function sendDuesTemplate(toPhone, { memberName, amount }) {
+  const client = getTwilioClient();
+  if (!client) {
+    console.warn("[WhatsApp] Twilio not configured — dues template skipped.");
+    return null;
+  }
+
+  if (!config.twilio.duesTemplateSid) {
+    console.warn("[WhatsApp] TWILIO_DUES_TEMPLATE_SID not set — dues template skipped.");
+    return null;
+  }
+
+  try {
+    const payload = {
+      to: `whatsapp:${formatPhone(toPhone)}`,
+      contentSid: config.twilio.duesTemplateSid,
+      contentVariables: JSON.stringify({ 1: memberName, 2: amount }),
+    };
+
+    if (config.twilio.messagingServiceSid) {
+      payload.messagingServiceSid = config.twilio.messagingServiceSid;
+    } else {
+      payload.from = config.twilio.whatsappFrom;
+    }
+
+    const message = await client.messages.create(payload);
+    return message.sid;
+  } catch (err) {
+    console.error(`[WhatsApp] Failed to send dues template to ${toPhone}:`, err.message);
+    return null;
+  }
+}
+
 module.exports = {
   getTwilioClient,
   formatPhone,
   sendWhatsApp,
   sendWelcomeTemplate,
+  sendRenewalTemplate,
+  sendDuesTemplate,
   sendWhatsAppBulk,
   DEFAULT_WELCOME_MESSAGE,
 };

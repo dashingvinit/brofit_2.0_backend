@@ -57,6 +57,58 @@ class WhatsappWebhookController {
     res.set("Content-Type", "text/xml");
     res.status(200).send("<Response></Response>");
   };
+
+  /**
+   * Handles Twilio message status callbacks.
+   * Twilio POSTs here when a message transitions to delivered/failed/undelivered.
+   * We stamp welcomeSentAt only when status = "delivered" so failed sends don't block retries.
+   *
+   * POST /api/v1/webhooks/whatsapp/status
+   */
+  handleStatusCallback = async (req, res) => {
+    // Validate signature in production
+    if (config.isProduction()) {
+      const twilioSignature = req.headers["x-twilio-signature"];
+      const url = `${req.protocol}://${req.get("host")}${req.originalUrl}`;
+      const isValid = twilio.validateRequest(
+        config.twilio.authToken,
+        twilioSignature,
+        url,
+        req.body,
+      );
+      if (!isValid) {
+        return res.status(403).send("Forbidden");
+      }
+    }
+
+    const { To, MessageStatus } = req.body;
+
+    if (MessageStatus === "delivered" && To) {
+      try {
+        const rawPhone = To.replace(/^whatsapp:/, "");
+        const normalised = formatPhone(rawPhone);
+        const last10 = normalised.replace(/\D/g, "").slice(-10);
+
+        // Only stamp if not already set (idempotent)
+        await prisma.member.updateMany({
+          where: {
+            phone: { endsWith: last10 },
+            welcomeSentAt: null,
+          },
+          data: { welcomeSentAt: new Date() },
+        });
+
+        console.log(`[WhatsApp] Welcome delivered & stamped: ${normalised}`);
+      } catch (err) {
+        console.error("[WhatsApp] Status callback DB update failed:", err.message);
+      }
+    } else if (MessageStatus === "failed" || MessageStatus === "undelivered") {
+      console.warn(`[WhatsApp] Welcome message ${MessageStatus} for ${To}`);
+    }
+
+    // Twilio expects 200 or it will retry
+    res.status(200).send();
+  };
 }
 
 module.exports = new WhatsappWebhookController();

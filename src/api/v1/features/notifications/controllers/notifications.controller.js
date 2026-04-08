@@ -126,6 +126,24 @@ class NotificationsController {
       next(error);
     }
   };
+
+  /**
+   * POST /notifications/reset-welcome
+   * Clears welcomeSentAt so members are eligible for the welcome message again.
+   * Body: { memberIds?: string[] }  — omit to reset all members in the org.
+   */
+  resetWelcome = async (req, res, next) => {
+    try {
+      const orgId = requireOrgId(req, res);
+      if (!orgId) return;
+
+      const { memberIds } = req.body;
+      const data = await notificationsService.resetWelcome(orgId, memberIds);
+      res.status(200).json({ success: true, data });
+    } catch (error) {
+      next(error);
+    }
+  };
 }
 
 module.exports = new NotificationsController();
