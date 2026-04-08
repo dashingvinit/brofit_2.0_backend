@@ -387,21 +387,28 @@ enum DiscountType {
   percentage
 }
 
+enum OfferAppliesTo {
+  membership
+  training
+  both
+}
+
 model Offer {
-  id            String        @id @default(uuid())
-  orgId         String        @map("org_id")
+  id            String          @id @default(uuid())
+  orgId         String          @map("org_id")
   type          OfferType
   title         String
   description   String?
-  startDate     DateTime?     @map("start_date")
-  endDate       DateTime?     @map("end_date")
-  isActive      Boolean       @default(true) @map("is_active")
-  discountType  DiscountType? @map("discount_type")
-  discountValue Float?        @map("discount_value")
+  startDate     DateTime?       @map("start_date")
+  endDate       DateTime?       @map("end_date")
+  isActive      Boolean         @default(true) @map("is_active")
+  discountType  DiscountType?   @map("discount_type")
+  discountValue Float?          @map("discount_value")
   code          String?
-  rewardAmount  Float?        @map("reward_amount")
-  createdAt     DateTime      @default(now()) @map("created_at")
-  updatedAt     DateTime      @updatedAt @map("updated_at")
+  rewardAmount  Float?          @map("reward_amount")
+  appliesTo     OfferAppliesTo  @default(membership) @map("applies_to")
+  createdAt     DateTime        @default(now()) @map("created_at")
+  updatedAt     DateTime        @updatedAt @map("updated_at")
 
   org         Organization @relation(fields: [orgId], references: [id])
   memberships Membership[]

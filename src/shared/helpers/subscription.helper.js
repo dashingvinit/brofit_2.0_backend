@@ -146,6 +146,12 @@ async function resolveOfferDiscount(offerId, orgId, planVariantPrice) {
   });
   if (!offer) throw createError("Offer not found or inactive", 400);
   if (!["discount", "promo"].includes(offer.type)) return null;
+
+  // For combo offers (appliesTo: 'both'), the frontend already split the discount
+  // proportionally across membership and training. The full offer value would exceed
+  // a single item's price, so return null and let the service use data.discountAmount.
+  if (offer.appliesTo === "both") return null;
+
   if (offer.discountType === "percentage") {
     return (planVariantPrice * offer.discountValue) / 100;
   }

@@ -4,6 +4,7 @@ const { createError } = require("../../../../../shared/helpers/subscription.help
 
 const VALID_TYPES = ["event", "referral", "discount", "promo"];
 const VALID_DISCOUNT_TYPES = ["flat", "percentage"];
+const VALID_APPLIES_TO = ["membership", "training", "both"];
 
 class OfferService {
   async getAllOffers(orgId, filters = {}, page = 1, limit = 20) {
@@ -43,6 +44,10 @@ class OfferService {
       throw createError("End date must be after start date", 400);
     }
 
+    const appliesTo = data.appliesTo && VALID_APPLIES_TO.includes(data.appliesTo)
+      ? data.appliesTo
+      : "membership";
+
     return await offerRepository.create({
       orgId: data.orgId,
       type: data.type,
@@ -55,6 +60,7 @@ class OfferService {
       discountValue: data.discountValue ?? null,
       code: data.code || null,
       rewardAmount: data.rewardAmount ?? null,
+      appliesTo,
     });
   }
 
@@ -69,6 +75,9 @@ class OfferService {
     if (updateData.title !== undefined) dbData.title = updateData.title.trim();
     if (updateData.startDate !== undefined) dbData.startDate = updateData.startDate ? new Date(updateData.startDate) : null;
     if (updateData.endDate !== undefined) dbData.endDate = updateData.endDate ? new Date(updateData.endDate) : null;
+    if (updateData.appliesTo !== undefined && !VALID_APPLIES_TO.includes(updateData.appliesTo)) {
+      delete dbData.appliesTo;
+    }
 
     return await offerRepository.update(id, dbData);
   }
