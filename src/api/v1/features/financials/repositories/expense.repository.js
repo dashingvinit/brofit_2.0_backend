@@ -23,11 +23,11 @@ class ExpenseRepository {
   }
 
   async update(id, orgId, data) {
-    return prisma.expense.updateMany({ where: { id, orgId }, data });
+    return prisma.expense.update({ where: { id, orgId }, data });
   }
 
   async delete(id, orgId) {
-    return prisma.expense.deleteMany({ where: { id, orgId } });
+    return prisma.expense.delete({ where: { id, orgId } });
   }
 
   /**

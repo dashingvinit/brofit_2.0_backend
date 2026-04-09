@@ -8,7 +8,7 @@ class InvestmentService {
       orgId,
       name,
       amount: parseFloat(amount),
-      date: new Date(date),
+      date: new Date(`${date}T00:00:00`),
       notes: notes || null,
     });
     cache.invalidate(`financials:${orgId}`);
@@ -26,11 +26,11 @@ class InvestmentService {
     const updates = {};
     if (data.name !== undefined) updates.name = data.name;
     if (data.amount !== undefined) updates.amount = parseFloat(data.amount);
-    if (data.date !== undefined) updates.date = new Date(data.date);
+    if (data.date !== undefined) updates.date = new Date(`${data.date}T00:00:00`);
     if (data.notes !== undefined) updates.notes = data.notes;
-    await investmentRepository.update(id, orgId, updates);
+    const updated = await investmentRepository.update(id, orgId, updates);
     cache.invalidate(`financials:${orgId}`);
-    return investmentRepository.findOne(id, orgId);
+    return updated;
   }
 
   async deleteInvestment(id, orgId) {

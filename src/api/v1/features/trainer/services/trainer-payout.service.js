@@ -72,7 +72,7 @@ class TrainerPayoutService {
     const rows = trainings.map((training) => {
       const months = getTrainingMonths(training.startDate, training.planVariant?.durationDays ?? 30);
       const totalMonths = months.length;
-      const revenueBase = totalMonths > 0 ? training.finalPrice / totalMonths : 0;
+      const revenueBase = totalMonths > 0 ? training.priceAtPurchase / totalMonths : 0;
       const amount = parseFloat(((revenueBase * splitPercent) / 100).toFixed(2));
 
       const monthSlots = months.map(({ month, year }) => {
@@ -147,7 +147,7 @@ class TrainerPayoutService {
     const isValidMonth = months.some((m) => m.month === month && m.year === year);
     if (!isValidMonth) throw createError("Month is not within the training period", 400);
 
-    const revenueBase = training.finalPrice / totalMonths;
+    const revenueBase = training.priceAtPurchase / totalMonths;
     const amount = parseFloat(((revenueBase * splitPercent) / 100).toFixed(2));
 
     const payout = await trainerPayoutRepository.create({
@@ -198,7 +198,7 @@ class TrainerPayoutService {
       select: {
         id: true,
         trainerId: true,
-        finalPrice: true,
+        priceAtPurchase: true,
         startDate: true,
         planVariant: { select: { durationDays: true } },
       },
@@ -222,7 +222,7 @@ class TrainerPayoutService {
       if (totalMonths === 0) continue;
       const split = splitByTrainer[training.trainerId] ?? SPLIT_PERCENT;
       const monthlyAmount = parseFloat(
-        (((training.finalPrice / totalMonths) * split) / 100).toFixed(2),
+        (((training.priceAtPurchase / totalMonths) * split) / 100).toFixed(2),
       );
       const totalOwed = monthlyAmount * totalMonths;
       owedByTrainer[training.trainerId] =

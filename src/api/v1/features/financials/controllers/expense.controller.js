@@ -22,8 +22,15 @@ class ExpenseController {
       if (!orgId) return;
 
       const { amount, category, description, date } = req.body;
-      if (!amount || !date) {
+
+      if (amount == null || !date) {
         return res.status(400).json({ success: false, message: "amount and date are required" });
+      }
+      if (parseFloat(amount) <= 0) {
+        return res.status(400).json({ success: false, message: "amount must be greater than 0" });
+      }
+      if (category && !expenseService.VALID_CATEGORIES.includes(category)) {
+        return res.status(400).json({ success: false, message: `category must be one of: ${expenseService.VALID_CATEGORIES.join(", ")}` });
       }
 
       const expense = await expenseService.createExpense(orgId, { amount, category, description, date });
@@ -39,6 +46,15 @@ class ExpenseController {
       if (!orgId) return;
 
       const { id } = req.params;
+      const { amount, category } = req.body;
+
+      if (amount !== undefined && parseFloat(amount) <= 0) {
+        return res.status(400).json({ success: false, message: "amount must be greater than 0" });
+      }
+      if (category !== undefined && !expenseService.VALID_CATEGORIES.includes(category)) {
+        return res.status(400).json({ success: false, message: `category must be one of: ${expenseService.VALID_CATEGORIES.join(", ")}` });
+      }
+
       const expense = await expenseService.updateExpense(id, orgId, req.body);
       res.status(200).json({ success: true, data: expense });
     } catch (error) {

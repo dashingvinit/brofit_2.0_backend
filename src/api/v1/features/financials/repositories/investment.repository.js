@@ -17,11 +17,11 @@ class InvestmentRepository {
   }
 
   async update(id, orgId, data) {
-    return prisma.investment.updateMany({ where: { id, orgId }, data });
+    return prisma.investment.update({ where: { id, orgId }, data });
   }
 
   async delete(id, orgId) {
-    return prisma.investment.deleteMany({ where: { id, orgId } });
+    return prisma.investment.delete({ where: { id, orgId } });
   }
 
   /**
