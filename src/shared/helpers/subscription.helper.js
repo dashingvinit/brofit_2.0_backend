@@ -147,6 +147,10 @@ async function resolveOfferDiscount(offerId, orgId, planVariantPrice) {
   if (!offer) throw createError("Offer not found or inactive", 400);
   if (!["discount", "promo"].includes(offer.type)) return null;
 
+  const now = new Date();
+  if (offer.startDate && offer.startDate > now) throw createError("This offer has not started yet", 400);
+  if (offer.endDate && offer.endDate < now) throw createError("This offer has expired", 400);
+
   // For combo offers (appliesTo: 'both'), the frontend already split the discount
   // proportionally across membership and training. The full offer value would exceed
   // a single item's price, so return null and let the service use data.discountAmount.
@@ -182,6 +186,10 @@ async function resolveOfferConfig(offerId, orgId, memberId, membershipVariantId,
   if (!offer) throw createError("Offer not found or inactive", 400);
   if (!["discount", "promo"].includes(offer.type)) return null;
 
+  const now = new Date();
+  if (offer.startDate && offer.startDate > now) throw createError("This offer has not started yet", 400);
+  if (offer.endDate && offer.endDate < now) throw createError("This offer has expired", 400);
+
   // 1. Gender validation
   if (offer.targetGender) {
     const member = await prisma.member.findUnique({
@@ -213,19 +221,21 @@ async function resolveOfferConfig(offerId, orgId, memberId, membershipVariantId,
   const mPrice = offer.membershipPlanVariant?.price ?? 0;
   const tPrice = offer.trainingPlanVariant?.price ?? 0;
 
+  const round2 = (n) => Math.round(n * 100) / 100;
+
   if (offer.targetPrice != null) {
     // Target-price based: discount = total variant prices - target price
     const totalVariantPrice = (membershipVariantId ? mPrice : 0) + (trainingVariantId ? tPrice : 0);
     const totalDiscount = Math.max(0, totalVariantPrice - offer.targetPrice);
 
     if (membershipVariantId && trainingVariantId && totalVariantPrice > 0) {
-      // Split proportionally
-      membershipDiscount = Math.round((totalDiscount * mPrice) / totalVariantPrice);
-      trainingDiscount = totalDiscount - membershipDiscount;
+      // Split proportionally; assign remainder to training to avoid cent-level drift
+      membershipDiscount = round2((totalDiscount * mPrice) / totalVariantPrice);
+      trainingDiscount = round2(totalDiscount - membershipDiscount);
     } else if (membershipVariantId) {
-      membershipDiscount = totalDiscount;
+      membershipDiscount = round2(totalDiscount);
     } else {
-      trainingDiscount = totalDiscount;
+      trainingDiscount = round2(totalDiscount);
     }
   } else if (offer.discountValue != null) {
     // Legacy discountType/discountValue flow
@@ -234,7 +244,7 @@ async function resolveOfferConfig(offerId, orgId, memberId, membershipVariantId,
 
     const computeDiscount = (base) =>
       offer.discountType === "percentage"
-        ? Math.round((base * offer.discountValue) / 100)
+        ? round2((base * offer.discountValue) / 100)
         : offer.discountValue;
 
     if (offer.appliesTo === "training" || (!membershipVariantId && trainingVariantId)) {

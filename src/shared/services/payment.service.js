@@ -53,14 +53,21 @@ class PaymentService {
   }
 
   async getPaymentById(paymentId, { trainingOnly = false } = {}) {
+    const MEMBER_SELECT = { select: { id: true, firstName: true, lastName: true, phone: true, email: true } };
+    const PLAN_VARIANT_SELECT = {
+      select: {
+        id: true, price: true, durationLabel: true,
+        planType: { select: { id: true, name: true, category: true } },
+      },
+    };
     const include = trainingOnly
       ? {
-          member: true,
-          training: { include: { planVariant: { include: { planType: true } } } },
+          member: MEMBER_SELECT,
+          training: { select: { id: true, planVariant: PLAN_VARIANT_SELECT } },
         }
       : {
-          member: true,
-          membership: { include: { planVariant: { include: { planType: true } } } },
+          member: MEMBER_SELECT,
+          membership: { select: { id: true, planVariant: PLAN_VARIANT_SELECT } },
         };
 
     const payment = await paymentRepository.get(paymentId, { include });

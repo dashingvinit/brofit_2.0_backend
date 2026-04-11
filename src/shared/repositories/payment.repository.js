@@ -18,9 +18,15 @@ class PaymentRepository extends CrudRepository {
 
   async findByMember(memberId, page = 1, limit = 10, { trainingOnly = false } = {}) {
     const where = { memberId };
+    const PLAN_VARIANT_SELECT = {
+      select: {
+        id: true, price: true, durationLabel: true,
+        planType: { select: { id: true, name: true, category: true } },
+      },
+    };
     const include = trainingOnly
-      ? { training: { include: { planVariant: { include: { planType: true } } } } }
-      : { membership: { include: { planVariant: { include: { planType: true } } } } };
+      ? { training: { select: { id: true, planVariant: PLAN_VARIANT_SELECT } } }
+      : { membership: { select: { id: true, planVariant: PLAN_VARIANT_SELECT } } };
 
     if (trainingOnly) {
       where.trainingId = { not: null };
@@ -47,14 +53,21 @@ class PaymentRepository extends CrudRepository {
     if (filters.trainingId) where.trainingId = filters.trainingId;
     if (filters.method) where.method = filters.method;
 
+    const MEMBER_SELECT = { select: { id: true, firstName: true, lastName: true, phone: true, email: true } };
+    const PLAN_VARIANT_SELECT = {
+      select: {
+        id: true, price: true, durationLabel: true,
+        planType: { select: { id: true, name: true, category: true } },
+      },
+    };
     const include = trainingOnly
       ? {
-          member: true,
-          training: { include: { planVariant: { include: { planType: true } } } },
+          member: MEMBER_SELECT,
+          training: { select: { id: true, planVariant: PLAN_VARIANT_SELECT } },
         }
       : {
-          member: true,
-          membership: { include: { planVariant: { include: { planType: true } } } },
+          member: MEMBER_SELECT,
+          membership: { select: { id: true, planVariant: PLAN_VARIANT_SELECT } },
         };
 
     return await this.findWithPagination(where, {
@@ -154,6 +167,33 @@ class PaymentRepository extends CrudRepository {
       map.set(key, (map.get(key) || 0) + Number(r.total));
     }
     return map;
+  }
+
+  /**
+   * Date of the earliest paid membership or training start date for an org.
+   * Used as the gym's operational start date for ROI calculations.
+   */
+  async getEarliestRevenueDate(orgId) {
+    const [membershipRow, trainingRow] = await Promise.all([
+      prisma.$queryRaw`
+        SELECT MIN(m.start_date) AS earliest
+        FROM payments p
+        JOIN memberships m ON m.id = p.membership_id
+        WHERE p.org_id = ${orgId} AND p.status = 'paid'
+      `,
+      prisma.$queryRaw`
+        SELECT MIN(t.start_date) AS earliest
+        FROM payments p
+        JOIN trainings t ON t.id = p.training_id
+        WHERE p.org_id = ${orgId} AND p.status = 'paid'
+      `,
+    ]);
+    const d1 = membershipRow[0]?.earliest ? new Date(membershipRow[0].earliest) : null;
+    const d2 = trainingRow[0]?.earliest ? new Date(trainingRow[0].earliest) : null;
+    if (!d1 && !d2) return null;
+    if (!d1) return d2;
+    if (!d2) return d1;
+    return d1 < d2 ? d1 : d2;
   }
 
   async getPaymentStats(orgId, { trainingOnly = false, membershipOnly = false } = {}) {

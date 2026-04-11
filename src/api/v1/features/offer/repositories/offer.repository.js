@@ -50,20 +50,26 @@ class OfferRepository extends CrudRepository {
       prisma.membership.aggregate({
         where: { offerId: id, orgId },
         _count: true,
-        _sum: { finalPrice: true },
+        _sum: { finalPrice: true, discountAmount: true },
       }),
       prisma.training.aggregate({
         where: { offerId: id, orgId },
         _count: true,
-        _sum: { finalPrice: true },
+        _sum: { finalPrice: true, discountAmount: true },
       }),
     ]);
 
+    const membershipRevenue = memberships._sum.finalPrice || 0;
+    const trainingRevenue = trainings._sum.finalPrice || 0;
+    const membershipDiscount = memberships._sum.discountAmount || 0;
+    const trainingDiscount = trainings._sum.discountAmount || 0;
+
     return {
-      memberships: { count: memberships._count, revenue: memberships._sum.finalPrice || 0 },
-      trainings: { count: trainings._count, revenue: trainings._sum.finalPrice || 0 },
+      memberships: { count: memberships._count, revenue: membershipRevenue, discountGiven: membershipDiscount },
+      trainings: { count: trainings._count, revenue: trainingRevenue, discountGiven: trainingDiscount },
       totalUsage: memberships._count + trainings._count,
-      totalRevenue: (memberships._sum.finalPrice || 0) + (trainings._sum.finalPrice || 0),
+      totalRevenue: membershipRevenue + trainingRevenue,
+      totalDiscountGiven: membershipDiscount + trainingDiscount,
     };
   }
 }

@@ -66,10 +66,6 @@ class MembershipService {
           notes: data.notes || null,
           offerId: data.offerId || null,
         },
-        include: {
-          member: true,
-          planVariant: { include: { planType: true } },
-        },
       });
 
       let payment = null;

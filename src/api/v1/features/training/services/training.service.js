@@ -73,11 +73,6 @@ class TrainingService {
           offerId: data.offerId || null,
           trainerFixedPayout: resolvedTrainerPayout,
         },
-        include: {
-          member: true,
-          planVariant: { include: { planType: true } },
-          trainer: true,
-        },
       });
 
       let payment = null;

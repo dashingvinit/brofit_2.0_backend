@@ -31,7 +31,10 @@ function computeMonthlyAmount(training, splitPercent, totalMonths) {
   if (training.trainerFixedPayout != null) {
     return parseFloat((training.trainerFixedPayout / (totalMonths || 1)).toFixed(2));
   }
-  const revenueBase = totalMonths > 0 ? training.finalPrice / totalMonths : 0;
+  // Split is calculated on priceAtPurchase (base plan price), not finalPrice.
+  // The gym absorbs any discount — the trainer's earning is not penalised for it.
+  const basePrice = training.priceAtPurchase ?? training.finalPrice;
+  const revenueBase = totalMonths > 0 ? basePrice / totalMonths : 0;
   return parseFloat(((revenueBase * splitPercent) / 100).toFixed(2));
 }
 
@@ -71,6 +74,9 @@ class TrainerPayoutService {
       },
       orderBy: { endDate: "asc" },
     });
+
+    // Ensure priceAtPurchase is available (older records may not have it)
+    // computeMonthlyAmount falls back to finalPrice if missing
 
     // Fetch all existing payouts for this trainer
     const existingPayouts = await trainerPayoutRepository.findPaidMonthsByTrainer(trainerId);
@@ -146,7 +152,15 @@ class TrainerPayoutService {
     // Verify training belongs to this trainer
     const training = await prisma.training.findFirst({
       where: { id: trainingId, trainerId },
-      include: { planVariant: { select: { durationDays: true } } },
+      select: {
+        id: true,
+        orgId: true,
+        startDate: true,
+        priceAtPurchase: true,
+        finalPrice: true,
+        trainerFixedPayout: true,
+        planVariant: { select: { durationDays: true } },
+      },
     });
     if (!training) throw createError("Training not found for this trainer", 404);
 
@@ -164,7 +178,8 @@ class TrainerPayoutService {
     if (!isValidMonth) throw createError("Month is not within the training period", 400);
 
     const amount = computeMonthlyAmount(training, splitPercent, totalMonths);
-    const revenueBase = training.finalPrice / totalMonths;
+    const basePrice = training.priceAtPurchase ?? training.finalPrice;
+    const revenueBase = basePrice / totalMonths;
 
     const payoutDate = new Date();
 
@@ -229,6 +244,7 @@ class TrainerPayoutService {
       select: {
         id: true,
         trainerId: true,
+        priceAtPurchase: true,
         finalPrice: true,
         trainerFixedPayout: true,
         startDate: true,

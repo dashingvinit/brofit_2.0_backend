@@ -53,36 +53,41 @@ class FinancialsAnalyticsService {
       const now = new Date();
       const epoch = new Date(0);
 
-      const [totalInvested, totalRevenue, totalExpenses, earliestInvestmentDate] =
+      const [totalInvested, totalRevenue, totalExpenses, operationalStartDate] =
         await Promise.all([
           investmentRepository.totalInvested(orgId, now),
           paymentRepository.sumInRange(orgId, epoch, now),
           expenseRepository.sumInRange(orgId, epoch, now),
-          investmentRepository.getEarliestDate(orgId),
+          paymentRepository.getEarliestRevenueDate(orgId),
         ]);
 
       const totalNetProfit = totalRevenue - totalExpenses;
 
+      // Use exact days since first revenue to measure operational period
       let paybackMonths = null;
-      if (totalInvested > 0 && earliestInvestmentDate) {
-        const monthsElapsed = Math.max(
+      let projectedAnnualRoi = null;
+      if (totalInvested > 0 && operationalStartDate) {
+        const daysElapsed = Math.max(
           1,
-          (now.getFullYear() - earliestInvestmentDate.getFullYear()) * 12 +
-            (now.getMonth() - earliestInvestmentDate.getMonth()),
+          (now - operationalStartDate) / (1000 * 60 * 60 * 24),
         );
+        const monthsElapsed = daysElapsed / 30.44; // avg days per month
         const avgMonthlyNet = totalNetProfit / monthsElapsed;
-        paybackMonths = avgMonthlyNet > 0 ? Math.ceil(totalInvested / avgMonthlyNet) : null;
-      }
 
-      const roiPercent =
-        totalInvested > 0 ? (totalNetProfit / totalInvested) * 100 : null;
+        // Payback: how many months at current avg monthly net to recover investment
+        paybackMonths = avgMonthlyNet > 0 ? Math.ceil(totalInvested / avgMonthlyNet) : null;
+
+        // Projected Annual ROI: annualise the current net profit rate
+        const annualNetProfit = avgMonthlyNet * 12;
+        projectedAnnualRoi = Math.round((annualNetProfit / totalInvested) * 100 * 100) / 100;
+      }
 
       return {
         totalInvested,
         totalRevenue,
         totalExpenses,
         totalNetProfit,
-        roiPercent: roiPercent !== null ? Math.round(roiPercent * 100) / 100 : null,
+        roiPercent: projectedAnnualRoi,
         paybackMonths,
       };
     });

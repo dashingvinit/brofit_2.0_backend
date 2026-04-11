@@ -99,6 +99,15 @@ class OfferService {
       throw createError("End date must be after start date", 400);
     }
 
+    // "both" + discountValue is unsupported — backend cannot safely split the discount.
+    // Use targetPrice for combo offers instead.
+    if (data.appliesTo === "both" && data.discountValue != null && data.targetPrice == null) {
+      throw createError(
+        "Combo offers (applies to both) must use a target price, not a discount value. Set a target price instead.",
+        400
+      );
+    }
+
     // Validate package config fields
     await this._validatePackageConfig(data);
 
@@ -134,6 +143,13 @@ class OfferService {
 
     if (updateData.startDate && updateData.endDate && new Date(updateData.endDate) <= new Date(updateData.startDate)) {
       throw createError("End date must be after start date", 400);
+    }
+
+    if (updateData.appliesTo === "both" && updateData.discountValue != null && updateData.targetPrice == null) {
+      throw createError(
+        "Combo offers (applies to both) must use a target price, not a discount value. Set a target price instead.",
+        400
+      );
     }
 
     // Validate package config if any package fields are being updated

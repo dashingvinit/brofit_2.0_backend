@@ -2,6 +2,25 @@ const CrudRepository = require("../../../../../shared/repositories/crud.reposito
 const { prisma } = require("../../../../../config/prisma.config");
 const { getStartOfCurrentMonth, startOfDay } = require("../../../../../shared/helpers/subscription.helper");
 
+const MEMBER_SELECT = {
+  id: true, firstName: true, lastName: true, phone: true, email: true,
+};
+
+const TRAINER_SELECT = {
+  id: true, firstName: true, lastName: true, phone: true, email: true,
+};
+
+const PLAN_VARIANT_INCLUDE = {
+  select: {
+    id: true, price: true, durationLabel: true, durationDays: true,
+    planType: { select: { id: true, name: true, category: true } },
+  },
+};
+
+const PAYMENT_SELECT = {
+  select: { id: true, amount: true, method: true, status: true, paidAt: true, createdAt: true },
+};
+
 class TrainingRepository extends CrudRepository {
   constructor() {
     super(prisma.training);
@@ -12,7 +31,11 @@ class TrainingRepository extends CrudRepository {
       { memberId },
       {
         orderBy: { createdAt: "desc" },
-        include: { planVariant: { include: { planType: true } }, trainer: true, payments: true },
+        include: {
+          planVariant: PLAN_VARIANT_INCLUDE,
+          trainer: { select: TRAINER_SELECT },
+          payments: PAYMENT_SELECT,
+        },
         ...options,
       },
     );
@@ -30,10 +53,10 @@ class TrainingRepository extends CrudRepository {
       limit,
       orderBy: { createdAt: "desc" },
       include: {
-        member: true,
-        planVariant: { include: { planType: true } },
-        trainer: true,
-        payments: true,
+        member: { select: MEMBER_SELECT },
+        planVariant: PLAN_VARIANT_INCLUDE,
+        trainer: { select: TRAINER_SELECT },
+        payments: PAYMENT_SELECT,
       },
     });
   }
@@ -42,9 +65,9 @@ class TrainingRepository extends CrudRepository {
     return await this.model.findUnique({
       where: { id },
       include: {
-        member: true,
-        planVariant: { include: { planType: true } },
-        trainer: true,
+        member: { select: MEMBER_SELECT },
+        planVariant: PLAN_VARIANT_INCLUDE,
+        trainer: { select: TRAINER_SELECT },
         payments: { orderBy: { createdAt: "desc" } },
       },
     });
@@ -52,16 +75,12 @@ class TrainingRepository extends CrudRepository {
 
   async findActiveTraining(memberId, orgId) {
     return await this.findOne(
-      {
-        memberId,
-        orgId,
-        status: "active",
-      },
+      { memberId, orgId, status: "active" },
       {
         include: {
-          planVariant: { include: { planType: true } },
-          trainer: true,
-          payments: true,
+          planVariant: PLAN_VARIANT_INCLUDE,
+          trainer: { select: TRAINER_SELECT },
+          payments: PAYMENT_SELECT,
         },
       },
     );
@@ -81,7 +100,11 @@ class TrainingRepository extends CrudRepository {
       },
       {
         orderBy: { endDate: "asc" },
-        include: { member: true, planVariant: { include: { planType: true } }, trainer: true },
+        include: {
+          member: { select: MEMBER_SELECT },
+          planVariant: PLAN_VARIANT_INCLUDE,
+          trainer: { select: TRAINER_SELECT },
+        },
       },
     );
   }
@@ -89,17 +112,13 @@ class TrainingRepository extends CrudRepository {
   async getTrainingStats(orgId) {
     const startOfMonth = getStartOfCurrentMonth();
 
-    const [total, active, expired, cancelled, newThisMonth] =
-      await Promise.all([
-        this.count({ orgId }),
-        this.count({ orgId, status: "active" }),
-        this.count({ orgId, status: "expired" }),
-        this.count({ orgId, status: "cancelled" }),
-        this.count({
-          orgId,
-          createdAt: { gte: startOfMonth },
-        }),
-      ]);
+    const [total, active, expired, cancelled, newThisMonth] = await Promise.all([
+      this.count({ orgId }),
+      this.count({ orgId, status: "active" }),
+      this.count({ orgId, status: "expired" }),
+      this.count({ orgId, status: "cancelled" }),
+      this.count({ orgId, createdAt: { gte: startOfMonth } }),
+    ]);
 
     return { total, active, expired, cancelled, newThisMonth };
   }
