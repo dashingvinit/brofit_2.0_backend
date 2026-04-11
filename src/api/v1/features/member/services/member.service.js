@@ -50,6 +50,7 @@ class MemberService {
       orgId: memberData.orgId,
       clerkUserId: memberData.clerkUserId || null,
       firstName: memberData.firstName,
+      middleName: memberData.middleName || null,
       lastName: memberData.lastName,
       email: memberData.email,
       phone: memberData.phone || "",
@@ -135,6 +136,7 @@ class MemberService {
 
     const dbData = {};
     if (updateData.firstName !== undefined) dbData.firstName = updateData.firstName;
+    if (updateData.middleName !== undefined) dbData.middleName = updateData.middleName || null;
     if (updateData.lastName !== undefined) dbData.lastName = updateData.lastName;
     if (updateData.email !== undefined) dbData.email = updateData.email;
     if (updateData.phone !== undefined) dbData.phone = updateData.phone;

@@ -16,6 +16,7 @@ class MemberController {
         ownerUserId: auth.userId,
         clerkUserId: req.body.clerkUserId || null,
         firstName: req.body.firstName,
+        middleName: req.body.middleName || null,
         lastName: req.body.lastName,
         email: req.body.email,
         phone: req.body.phone,

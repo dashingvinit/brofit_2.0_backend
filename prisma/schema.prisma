@@ -36,6 +36,7 @@ model Member {
   orgId         String    @map("org_id")
   clerkUserId   String?   @map("clerk_user_id")
   firstName     String    @map("first_name")
+  middleName    String?   @map("middle_name")
   lastName      String    @map("last_name")
   phone         String
   email         String
