@@ -17,6 +17,7 @@ class MembershipController {
         startDate: req.body.startDate,
         discountAmount: req.body.discountAmount,
         offerId: req.body.offerId,
+        trainingPlanVariantId: req.body.trainingPlanVariantId,
         autoRenew: req.body.autoRenew,
         notes: req.body.notes,
         paymentAmount: req.body.paymentAmount,
