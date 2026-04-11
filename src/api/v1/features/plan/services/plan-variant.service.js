@@ -18,13 +18,22 @@ class PlanVariantService {
 
     await planTypeService.getPlanTypeById(variantData.planTypeId, false);
 
-    return await planVariantRepository.create({
+    const data = {
       planTypeId: variantData.planTypeId,
       durationDays: variantData.durationDays,
       durationLabel: variantData.durationLabel,
       price: variantData.price,
       isActive: variantData.isActive ?? true,
-    });
+    };
+
+    if (variantData.defaultTrainerSplitPercent != null) {
+      data.defaultTrainerSplitPercent = variantData.defaultTrainerSplitPercent;
+    }
+    if (variantData.defaultTrainerFixedPayout != null) {
+      data.defaultTrainerFixedPayout = variantData.defaultTrainerFixedPayout;
+    }
+
+    return await planVariantRepository.create(data);
   }
 
   async getVariantById(variantId, includePlanType = true) {
@@ -51,12 +60,30 @@ class PlanVariantService {
     if (updateData.durationLabel !== undefined) dbData.durationLabel = updateData.durationLabel;
     if (updateData.price !== undefined) dbData.price = updateData.price;
     if (updateData.isActive !== undefined) dbData.isActive = updateData.isActive;
+    if (updateData.defaultTrainerSplitPercent !== undefined)
+      dbData.defaultTrainerSplitPercent = updateData.defaultTrainerSplitPercent;
+    if (updateData.defaultTrainerFixedPayout !== undefined)
+      dbData.defaultTrainerFixedPayout = updateData.defaultTrainerFixedPayout;
 
     return await planVariantRepository.update(variantId, dbData);
   }
 
   async deleteVariant(variantId) {
     await this._getVariantOrThrow(variantId);
+
+    const { prisma } = require("../../../../../config/prisma.config");
+    const [membershipCount, trainingCount] = await Promise.all([
+      prisma.membership.count({ where: { planVariantId: variantId } }),
+      prisma.training.count({ where: { planVariantId: variantId } }),
+    ]);
+
+    if (membershipCount > 0 || trainingCount > 0) {
+      throw createError(
+        "Cannot delete a plan variant that has existing subscriptions. Deactivate it instead.",
+        409,
+      );
+    }
+
     await planVariantRepository.destroy(variantId);
     return { message: "Plan variant deleted successfully" };
   }

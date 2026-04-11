@@ -189,6 +189,12 @@ class PlanController {
         durationLabel: req.body.durationLabel,
         price: req.body.price,
         isActive: req.body.isActive,
+        defaultTrainerSplitPercent: req.body.defaultTrainerSplitPercent != null
+          ? parseFloat(req.body.defaultTrainerSplitPercent)
+          : undefined,
+        defaultTrainerFixedPayout: req.body.defaultTrainerFixedPayout != null
+          ? parseFloat(req.body.defaultTrainerFixedPayout)
+          : undefined,
       };
 
       const variant = await planVariantService.createVariant(variantData);
@@ -260,6 +266,14 @@ class PlanController {
       if (req.body.price !== undefined) updateData.price = req.body.price;
       if (req.body.isActive !== undefined)
         updateData.isActive = req.body.isActive;
+      if (req.body.defaultTrainerSplitPercent !== undefined)
+        updateData.defaultTrainerSplitPercent = req.body.defaultTrainerSplitPercent != null
+          ? parseFloat(req.body.defaultTrainerSplitPercent)
+          : null;
+      if (req.body.defaultTrainerFixedPayout !== undefined)
+        updateData.defaultTrainerFixedPayout = req.body.defaultTrainerFixedPayout != null
+          ? parseFloat(req.body.defaultTrainerFixedPayout)
+          : null;
 
       const variant = await planVariantService.updateVariant(id, updateData);
 

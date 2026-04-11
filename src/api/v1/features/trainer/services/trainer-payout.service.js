@@ -22,6 +22,19 @@ function getTrainingMonths(startDate, durationDays) {
   return months;
 }
 
+/**
+ * Compute the monthly payout amount for a training.
+ * If trainerFixedPayout is set, split it evenly across months.
+ * Otherwise fall back to revenueBase × splitPercent%.
+ */
+function computeMonthlyAmount(training, splitPercent, totalMonths) {
+  if (training.trainerFixedPayout != null) {
+    return parseFloat((training.trainerFixedPayout / (totalMonths || 1)).toFixed(2));
+  }
+  const revenueBase = totalMonths > 0 ? training.finalPrice / totalMonths : 0;
+  return parseFloat(((revenueBase * splitPercent) / 100).toFixed(2));
+}
+
 class TrainerPayoutService {
   async _getTrainerOrThrow(trainerId) {
     const trainer = await trainerRepository.get(trainerId);
@@ -30,10 +43,10 @@ class TrainerPayoutService {
   }
 
   /**
-   * Returns the payout schedule for all active clients of a trainer.
+   * Returns the payout schedule for all active/expired clients of a trainer.
    * Each client row has:
-   *   - training info (id, member, plan, dates, finalPrice)
-   *   - months: array of { month, year, revenueBase, amount, paid, paidAt, payoutId }
+   *   - training info (id, member, plan, dates, finalPrice, trainerFixedPayout)
+   *   - months: array of { month, year, revenueBase, amount, paid, paidAt, isFixedPayout }
    */
   async getPayoutSchedule(trainerId) {
     const trainer = await this._getTrainerOrThrow(trainerId);
@@ -72,8 +85,9 @@ class TrainerPayoutService {
     const rows = trainings.map((training) => {
       const months = getTrainingMonths(training.startDate, training.planVariant?.durationDays ?? 30);
       const totalMonths = months.length;
-      const revenueBase = totalMonths > 0 ? training.priceAtPurchase / totalMonths : 0;
-      const amount = parseFloat(((revenueBase * splitPercent) / 100).toFixed(2));
+      const isFixedPayout = training.trainerFixedPayout != null;
+      const amount = computeMonthlyAmount(training, splitPercent, totalMonths);
+      const revenueBase = totalMonths > 0 ? training.finalPrice / totalMonths : 0;
 
       const monthSlots = months.map(({ month, year }) => {
         const key = `${training.id}-${month}-${year}`;
@@ -85,6 +99,7 @@ class TrainerPayoutService {
           amount,
           paid: !!payout,
           paidAt: payout?.paidAt ?? null,
+          isFixedPayout,
         };
       });
 
@@ -95,6 +110,7 @@ class TrainerPayoutService {
           startDate: training.startDate,
           endDate: training.endDate,
           finalPrice: training.finalPrice,
+          trainerFixedPayout: training.trainerFixedPayout,
           member: training.member,
           planVariant: training.planVariant,
         },
@@ -147,21 +163,36 @@ class TrainerPayoutService {
     const isValidMonth = months.some((m) => m.month === month && m.year === year);
     if (!isValidMonth) throw createError("Month is not within the training period", 400);
 
-    const revenueBase = training.priceAtPurchase / totalMonths;
-    const amount = parseFloat(((revenueBase * splitPercent) / 100).toFixed(2));
+    const amount = computeMonthlyAmount(training, splitPercent, totalMonths);
+    const revenueBase = training.finalPrice / totalMonths;
 
-    const payout = await trainerPayoutRepository.create({
-      orgId: training.orgId,
-      trainerId,
-      trainingId,
-      month,
-      year,
-      revenueBase: parseFloat(revenueBase.toFixed(2)),
-      splitPercent,
-      amount,
-      notes: notes ?? null,
-      paidAt: new Date(),
-    });
+    const payoutDate = new Date();
+
+    const [payout] = await prisma.$transaction([
+      prisma.trainerPayout.create({
+        data: {
+          orgId: training.orgId,
+          trainerId,
+          trainingId,
+          month,
+          year,
+          revenueBase: parseFloat(revenueBase.toFixed(2)),
+          splitPercent: training.trainerFixedPayout != null ? 0 : splitPercent,
+          amount,
+          notes: notes ?? null,
+          paidAt: payoutDate,
+        },
+      }),
+      prisma.expense.create({
+        data: {
+          orgId: training.orgId,
+          amount,
+          category: "staff",
+          description: `Trainer payout – ${trainer.name} (${month}/${year})${notes ? `: ${notes}` : ""}`,
+          date: payoutDate,
+        },
+      }),
+    ]);
 
     return payout;
   }
@@ -198,7 +229,8 @@ class TrainerPayoutService {
       select: {
         id: true,
         trainerId: true,
-        priceAtPurchase: true,
+        finalPrice: true,
+        trainerFixedPayout: true,
         startDate: true,
         planVariant: { select: { durationDays: true } },
       },
@@ -221,9 +253,7 @@ class TrainerPayoutService {
       const totalMonths = months.length;
       if (totalMonths === 0) continue;
       const split = splitByTrainer[training.trainerId] ?? SPLIT_PERCENT;
-      const monthlyAmount = parseFloat(
-        (((training.priceAtPurchase / totalMonths) * split) / 100).toFixed(2),
-      );
+      const monthlyAmount = computeMonthlyAmount(training, split, totalMonths);
       const totalOwed = monthlyAmount * totalMonths;
       owedByTrainer[training.trainerId] =
         (owedByTrainer[training.trainerId] ?? 0) + totalOwed;

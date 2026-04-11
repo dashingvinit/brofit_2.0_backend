@@ -10,6 +10,7 @@ const {
   validateStatusTransition,
   calculateDues,
   resolveOfferDiscount,
+  resolveOfferConfig,
   executeBatch,
 } = require("../../../../../shared/helpers/subscription.helper");
 
@@ -31,8 +32,18 @@ class MembershipService {
       planVariant.durationDays,
     );
 
-    const offerDiscount = await resolveOfferDiscount(data.offerId, data.orgId, planVariant.price);
-    const effectiveDiscount = offerDiscount !== null ? offerDiscount : (data.discountAmount || 0);
+    // Try enhanced offer config first, fall back to legacy
+    const offerConfig = await resolveOfferConfig(
+      data.offerId, data.orgId, data.memberId,
+      data.planVariantId, data.trainingPlanVariantId || null,
+    );
+    let effectiveDiscount;
+    if (offerConfig) {
+      effectiveDiscount = offerConfig.membershipDiscount;
+    } else {
+      const offerDiscount = await resolveOfferDiscount(data.offerId, data.orgId, planVariant.price);
+      effectiveDiscount = offerDiscount !== null ? offerDiscount : (data.discountAmount || 0);
+    }
 
     const { priceAtPurchase, discountAmount, finalPrice } = calculatePricing(
       planVariant.price,

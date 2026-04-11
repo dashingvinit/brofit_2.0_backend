@@ -92,9 +92,16 @@ model PlanVariant {
   isActive      Boolean  @default(true) @map("is_active")
   createdAt     DateTime @default(now()) @map("created_at")
 
+  // Trainer payout defaults (only relevant for training-category variants)
+  defaultTrainerSplitPercent Float? @map("default_trainer_split_percent")
+  defaultTrainerFixedPayout  Float? @map("default_trainer_fixed_payout")
+
   planType    PlanType     @relation(fields: [planTypeId], references: [id], onDelete: Cascade)
   memberships Membership[]
   trainings   Training[]
+
+  offersAsMembership Offer[] @relation("OfferMembershipVariant")
+  offersAsTraining   Offer[] @relation("OfferTrainingVariant")
 
   @@index([planTypeId])
   @@index([isActive])
@@ -180,10 +187,11 @@ model Training {
   priceAtPurchase Float          @map("price_at_purchase")
   discountAmount  Float          @default(0) @map("discount_amount")
   finalPrice      Float          @map("final_price")
-  autoRenew       Boolean        @default(false) @map("auto_renew")
-  notes           String?
-  createdAt       DateTime       @default(now()) @map("created_at")
-  updatedAt       DateTime       @updatedAt @map("updated_at")
+  autoRenew           Boolean        @default(false) @map("auto_renew")
+  notes               String?
+  trainerFixedPayout  Float?         @map("trainer_fixed_payout")
+  createdAt           DateTime       @default(now()) @map("created_at")
+  updatedAt           DateTime       @updatedAt @map("updated_at")
 
   offerId         String?  @map("offer_id")
 
@@ -410,9 +418,19 @@ model Offer {
   createdAt     DateTime        @default(now()) @map("created_at")
   updatedAt     DateTime        @updatedAt @map("updated_at")
 
-  org         Organization @relation(fields: [orgId], references: [id])
-  memberships Membership[]
-  trainings   Training[]
+  // Package configuration — smart offer fields
+  targetGender              String?  @map("target_gender")
+  membershipPlanVariantId   String?  @map("membership_plan_variant_id")
+  trainingPlanVariantId     String?  @map("training_plan_variant_id")
+  targetPrice               Float?   @map("target_price")
+  trainerFixedPayout        Float?   @map("trainer_fixed_payout")
+  trainerSplitPercent       Float?   @map("trainer_split_percent")
+
+  org                    Organization @relation(fields: [orgId], references: [id])
+  membershipPlanVariant  PlanVariant? @relation("OfferMembershipVariant", fields: [membershipPlanVariantId], references: [id])
+  trainingPlanVariant    PlanVariant? @relation("OfferTrainingVariant", fields: [trainingPlanVariantId], references: [id])
+  memberships            Membership[]
+  trainings              Training[]
 
   @@index([orgId])
   @@index([type])

@@ -91,6 +91,27 @@ class OfferController {
   };
 
   /**
+   * Get offer performance stats
+   * GET /api/v1/offers/:id/stats
+   */
+  getOfferStats = async (req, res, next) => {
+    try {
+      const orgId = requireOrgId(req, res);
+      if (!orgId) return;
+
+      const { id } = req.params;
+      const stats = await offerService.getOfferStats(id, orgId);
+
+      res.status(200).json({
+        success: true,
+        data: stats,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
    * Delete offer (hard if unused, soft if linked to memberships/trainings)
    * DELETE /api/v1/offers/:id
    */

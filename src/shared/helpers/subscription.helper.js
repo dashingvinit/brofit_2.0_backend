@@ -159,6 +159,100 @@ async function resolveOfferDiscount(offerId, orgId, planVariantPrice) {
 }
 
 /**
+ * Enhanced offer resolution for "smart package" offers.
+ * Validates gender, plan variants, computes discounts from targetPrice,
+ * and returns trainer payout overrides.
+ *
+ * Falls back to legacy resolveOfferDiscount behaviour for offers
+ * that don't use the new package fields.
+ *
+ * @returns {{ membershipDiscount: number, trainingDiscount: number,
+ *             trainerFixedPayout: number|null, trainerSplitPercent: number|null } | null}
+ */
+async function resolveOfferConfig(offerId, orgId, memberId, membershipVariantId, trainingVariantId) {
+  if (!offerId) return null;
+
+  const offer = await prisma.offer.findFirst({
+    where: { id: offerId, orgId, isActive: true },
+    include: {
+      membershipPlanVariant: true,
+      trainingPlanVariant: true,
+    },
+  });
+  if (!offer) throw createError("Offer not found or inactive", 400);
+  if (!["discount", "promo"].includes(offer.type)) return null;
+
+  // 1. Gender validation
+  if (offer.targetGender) {
+    const member = await prisma.member.findUnique({
+      where: { id: memberId },
+      select: { gender: true },
+    });
+    if (!member) throw createError("Member not found", 404);
+    if (member.gender !== offer.targetGender) {
+      throw createError(`This offer is only available for ${offer.targetGender} members`, 400);
+    }
+  }
+
+  // 2. Plan variant validation
+  if (offer.membershipPlanVariantId && membershipVariantId) {
+    if (offer.membershipPlanVariantId !== membershipVariantId) {
+      throw createError("Selected membership plan does not match this offer's required plan", 400);
+    }
+  }
+  if (offer.trainingPlanVariantId && trainingVariantId) {
+    if (offer.trainingPlanVariantId !== trainingVariantId) {
+      throw createError("Selected training plan does not match this offer's required plan", 400);
+    }
+  }
+
+  // 3. Compute discounts
+  let membershipDiscount = 0;
+  let trainingDiscount = 0;
+
+  const mPrice = offer.membershipPlanVariant?.price ?? 0;
+  const tPrice = offer.trainingPlanVariant?.price ?? 0;
+
+  if (offer.targetPrice != null) {
+    // Target-price based: discount = total variant prices - target price
+    const totalVariantPrice = (membershipVariantId ? mPrice : 0) + (trainingVariantId ? tPrice : 0);
+    const totalDiscount = Math.max(0, totalVariantPrice - offer.targetPrice);
+
+    if (membershipVariantId && trainingVariantId && totalVariantPrice > 0) {
+      // Split proportionally
+      membershipDiscount = Math.round((totalDiscount * mPrice) / totalVariantPrice);
+      trainingDiscount = totalDiscount - membershipDiscount;
+    } else if (membershipVariantId) {
+      membershipDiscount = totalDiscount;
+    } else {
+      trainingDiscount = totalDiscount;
+    }
+  } else if (offer.discountValue != null) {
+    // Legacy discountType/discountValue flow
+    // For "both" offers, the frontend sends pre-split discountAmount — return null to use those
+    if (offer.appliesTo === "both") return null;
+
+    const computeDiscount = (base) =>
+      offer.discountType === "percentage"
+        ? Math.round((base * offer.discountValue) / 100)
+        : offer.discountValue;
+
+    if (offer.appliesTo === "training" || (!membershipVariantId && trainingVariantId)) {
+      trainingDiscount = computeDiscount(tPrice || 0);
+    } else {
+      membershipDiscount = computeDiscount(mPrice || 0);
+    }
+  }
+
+  return {
+    membershipDiscount,
+    trainingDiscount,
+    trainerFixedPayout: offer.trainerFixedPayout ?? null,
+    trainerSplitPercent: offer.trainerSplitPercent ?? null,
+  };
+}
+
+/**
  * Returns a new Date set to midnight (00:00:00.000) UTC of the given date.
  * Pass no argument to get the start of today UTC.
  */
@@ -204,6 +298,7 @@ module.exports = {
   validatePaymentAmount,
   executeBatch,
   resolveOfferDiscount,
+  resolveOfferConfig,
   startOfDay,
   getStartOfCurrentMonth,
   countActiveMembers,

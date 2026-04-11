@@ -10,6 +10,7 @@ const {
   validateStatusTransition,
   calculateDues,
   resolveOfferDiscount,
+  resolveOfferConfig,
 } = require("../../../../../shared/helpers/subscription.helper");
 
 class TrainingService {
@@ -30,13 +31,29 @@ class TrainingService {
       planVariant.durationDays,
     );
 
-    const offerDiscount = await resolveOfferDiscount(data.offerId, data.orgId, planVariant.price);
-    const effectiveDiscount = offerDiscount !== null ? offerDiscount : (data.discountAmount || 0);
+    // Try enhanced offer config first, fall back to legacy
+    const offerConfig = await resolveOfferConfig(
+      data.offerId, data.orgId, data.memberId,
+      data.membershipPlanVariantId || null, data.planVariantId,
+    );
+    let effectiveDiscount;
+    let offerTrainerPayout = null;
+    if (offerConfig) {
+      effectiveDiscount = offerConfig.trainingDiscount;
+      // Offer trainer payout overrides form input
+      if (offerConfig.trainerFixedPayout != null) offerTrainerPayout = offerConfig.trainerFixedPayout;
+    } else {
+      const offerDiscount = await resolveOfferDiscount(data.offerId, data.orgId, planVariant.price);
+      effectiveDiscount = offerDiscount !== null ? offerDiscount : (data.discountAmount || 0);
+    }
 
     const { priceAtPurchase, discountAmount, finalPrice } = calculatePricing(
       planVariant.price,
       effectiveDiscount,
     );
+
+    // Priority: offer payout > form input > null (uses trainer default split)
+    const resolvedTrainerPayout = offerTrainerPayout ?? (data.trainerFixedPayout != null ? parseFloat(data.trainerFixedPayout) : null);
 
     const result = await prisma.$transaction(async (tx) => {
       const training = await tx.training.create({
@@ -54,6 +71,7 @@ class TrainingService {
           autoRenew: data.autoRenew || false,
           notes: data.notes || null,
           offerId: data.offerId || null,
+          trainerFixedPayout: resolvedTrainerPayout,
         },
         include: {
           member: true,
@@ -133,6 +151,8 @@ class TrainingService {
       dbData.endDate = new Date(updateData.endDate);
     if (updateData.trainerId !== undefined)
       dbData.trainerId = updateData.trainerId;
+    if (updateData.trainerFixedPayout !== undefined)
+      dbData.trainerFixedPayout = updateData.trainerFixedPayout != null ? parseFloat(updateData.trainerFixedPayout) : null;
 
     await trainingRepository.update(trainingId, dbData);
     return await trainingRepository.findByIdWithDetails(trainingId);

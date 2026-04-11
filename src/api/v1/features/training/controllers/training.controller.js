@@ -21,6 +21,7 @@ class TrainingController {
         offerId: req.body.offerId,
         autoRenew: req.body.autoRenew,
         notes: req.body.notes,
+        trainerFixedPayout: req.body.trainerFixedPayout,
         paymentAmount: req.body.paymentAmount,
         paymentMethod: req.body.paymentMethod,
         paymentReference: req.body.paymentReference,
