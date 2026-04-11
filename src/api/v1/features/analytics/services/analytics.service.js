@@ -189,6 +189,42 @@ class AnalyticsService {
     });
   }
 
+  /**
+   * Unit economics for a given lookback window.
+   * ARPU   = windowRevenue / activeMembers
+   * Churn  = avg expired memberships per month / activeMembers
+   * LTV    = ARPU / churnRate  (or null if churn is 0)
+   * avgNewJoins = avg new member joins per month in window
+   */
+  async getUnitEconomics(orgId, windowMonths = 3) {
+    return cache.get(`analytics:unitEconomics:${orgId}:${windowMonths}`, cache.TTL.ONE_HOUR, async () => {
+      const { activeMembers, totalRevenue, newJoinRows, expiredRows, windowMonths: wm } =
+        await analyticsRepository.getUnitEconomicsInputs(orgId, windowMonths);
+
+      const arpu = activeMembers > 0 ? Math.round((totalRevenue / wm / activeMembers) * 100) / 100 : 0;
+
+      const totalExpired = expiredRows.reduce((s, r) => s + Number(r.count), 0);
+      const avgExpiredPerMonth = totalExpired / wm;
+      const churnRate = activeMembers > 0 ? Math.round((avgExpiredPerMonth / activeMembers) * 10000) / 10000 : 0;
+
+      const ltv = churnRate > 0 ? Math.round((arpu / churnRate) * 100) / 100 : null;
+
+      const totalNewJoins = newJoinRows.reduce((s, r) => s + Number(r.count), 0);
+      const avgNewJoinsPerMonth = Math.round((totalNewJoins / wm) * 10) / 10;
+
+      return {
+        window: windowMonths,
+        activeMembers,
+        arpu,
+        churnRate,
+        churnPercent: Math.round(churnRate * 10000) / 100, // as % with 2dp
+        ltv,
+        avgNewJoinsPerMonth,
+        dataPoints: newJoinRows.length, // how many months had data (for confidence warning)
+      };
+    });
+  }
+
   // Gender + age bracket distribution
   async getDemographics(orgId) {
     return cache.get(`analytics:demographics:${orgId}`, cache.TTL.TEN_MIN, async () => {

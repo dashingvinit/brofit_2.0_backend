@@ -203,6 +203,62 @@ class AnalyticsRepository {
     return { groups, variants };
   }
 
+  // ─── Unit Economics Inputs ─────────────────────────────────────────────────
+
+  /**
+   * Returns the raw inputs needed for unit economics + projection within a window.
+   * Single method so projection.service can get everything in 3 parallel queries.
+   *
+   * Returns:
+   *   activeMembers  – current active member count
+   *   totalRevenue   – sum of paid revenue in window
+   *   newJoins       – array of { year, month, count } in window
+   *   expiredPerMonth – avg memberships that lapsed per month in window (proxy for churn events)
+   */
+  async getUnitEconomicsInputs(orgId, windowMonths) {
+    const now = new Date();
+    const from = new Date(now.getFullYear(), now.getMonth() - (windowMonths - 1), 1);
+
+    const [activeMembers, revenueRows, newJoinRows, expiredRows] = await Promise.all([
+      countActiveMembers(orgId),
+      prisma.$queryRaw`
+        SELECT COALESCE(SUM(p.amount), 0) AS total
+        FROM payments p
+        JOIN memberships m ON m.id = p.membership_id
+        WHERE p.org_id = ${orgId} AND p.status = 'paid'
+          AND m.start_date >= ${from}
+        UNION ALL
+        SELECT COALESCE(SUM(p.amount), 0) AS total
+        FROM payments p
+        JOIN trainings t ON t.id = p.training_id
+        WHERE p.org_id = ${orgId} AND p.status = 'paid'
+          AND t.start_date >= ${from}
+      `,
+      prisma.$queryRaw`
+        SELECT EXTRACT(YEAR FROM join_date)::int  AS year,
+               EXTRACT(MONTH FROM join_date)::int AS month,
+               COUNT(*)::int                      AS count
+        FROM members
+        WHERE org_id = ${orgId} AND join_date >= ${from}
+        GROUP BY year, month
+        ORDER BY year, month
+      `,
+      prisma.$queryRaw`
+        SELECT EXTRACT(YEAR FROM end_date)::int  AS year,
+               EXTRACT(MONTH FROM end_date)::int AS month,
+               COUNT(*)::int                     AS count
+        FROM memberships
+        WHERE org_id = ${orgId}
+          AND status IN ('expired', 'cancelled')
+          AND end_date >= ${from} AND end_date <= ${now}
+        GROUP BY year, month
+      `,
+    ]);
+
+    const totalRevenue = revenueRows.reduce((s, r) => s + Number(r.total), 0);
+    return { activeMembers, totalRevenue, newJoinRows, expiredRows, windowMonths };
+  }
+
   // ─── Demographics ──────────────────────────────────────────────────────────
 
   async getDemographics(orgId) {

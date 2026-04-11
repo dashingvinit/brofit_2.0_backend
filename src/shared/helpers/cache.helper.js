@@ -47,6 +47,7 @@ const TTL = {
   FIVE_MIN: 5 * 60 * 1000,
   TEN_MIN: 10 * 60 * 1000,
   THIRTY_MIN: 30 * 60 * 1000,
+  ONE_HOUR: 60 * 60 * 1000,
 };
 
 module.exports = { get, invalidate, clear, TTL };

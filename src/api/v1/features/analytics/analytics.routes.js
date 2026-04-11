@@ -11,5 +11,7 @@ router.get("/trainer-performance", analyticsController.getTrainerPerformance);
 router.get("/member-growth", analyticsController.getMemberGrowth);
 router.get("/membership-duration-preference", analyticsController.getMembershipDurationPreference);
 router.get("/demographics", analyticsController.getDemographics);
+router.get("/unit-economics", analyticsController.getUnitEconomics);
+router.get("/projection", analyticsController.getProjection);
 
 module.exports = router;
