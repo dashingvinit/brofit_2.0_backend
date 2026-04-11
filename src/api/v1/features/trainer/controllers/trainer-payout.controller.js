@@ -56,6 +56,52 @@ class TrainerPayoutController {
   };
 
   /**
+   * DELETE /api/v1/trainers/:id/payouts
+   * Unmark a paid month — deletes the payout and its linked expense.
+   * Body: { trainingId, month, year }
+   */
+  deletePayout = async (req, res, next) => {
+    try {
+      const { id: trainerId } = req.params;
+      const { trainingId, month, year } = req.body;
+
+      if (!trainingId || !month || !year) {
+        return res.status(400).json({
+          success: false,
+          message: "trainingId, month, and year are required",
+        });
+      }
+
+      await trainerPayoutService.deletePayout(
+        trainerId,
+        trainingId,
+        Number(month),
+        Number(year),
+      );
+
+      res.status(200).json({ success: true, message: "Payout removed successfully" });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
+   * POST /api/v1/trainers/backfill-expenses
+   * Backfill missing expense records for old payouts.
+   */
+  backfillExpenses = async (req, res, next) => {
+    try {
+      const orgId = requireOrgId(req, res);
+      if (!orgId) return;
+
+      const result = await trainerPayoutService.backfillExpenses(orgId);
+      res.status(200).json({ success: true, data: result });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  /**
    * GET /api/v1/trainers/:id/payout-history
    * Returns all recorded payouts for a trainer.
    */

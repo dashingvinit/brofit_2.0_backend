@@ -14,12 +14,14 @@ router.post("/", trainerController.createTrainer);
 
 // Payout summary for all trainers in org (must be before /:id)
 router.get("/payout-summary", trainerPayoutController.getOutstandingSummary);
+router.post("/backfill-expenses", trainerPayoutController.backfillExpenses);
 
 router.get("/:id/clients", trainerController.getTrainerClients);
 router.get("/:id/history", trainerController.getAssignmentHistory);
 router.get("/:id/payout-schedule", trainerPayoutController.getPayoutSchedule);
 router.get("/:id/payout-history", trainerPayoutController.getPayoutHistory);
 router.post("/:id/payouts", trainerPayoutController.recordPayout);
+router.delete("/:id/payouts", trainerPayoutController.deletePayout);
 
 router.get("/:id", trainerController.getTrainerById);
 router.patch("/:id", trainerController.updateTrainer);

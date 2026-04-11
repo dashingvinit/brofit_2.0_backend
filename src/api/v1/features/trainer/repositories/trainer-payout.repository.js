@@ -43,11 +43,13 @@ class TrainerPayoutRepository extends CrudRepository {
     return await prisma.trainerPayout.findMany({
       where: { trainerId },
       select: {
+        id: true,
         trainingId: true,
         month: true,
         year: true,
         amount: true,
         paidAt: true,
+        expenseId: true,
       },
     });
   }
@@ -57,6 +59,16 @@ class TrainerPayoutRepository extends CrudRepository {
    */
   async findExisting(trainingId, month, year) {
     return await this.findOne({ trainingId, month, year });
+  }
+
+  /**
+   * Find a payout with its expenseId for deletion
+   */
+  async findByTrainingMonth(trainingId, trainerId, month, year) {
+    return await prisma.trainerPayout.findUnique({
+      where: { trainingId_month_year: { trainingId, month, year }, trainerId },
+      select: { id: true, expenseId: true, orgId: true },
+    });
   }
 
   /**

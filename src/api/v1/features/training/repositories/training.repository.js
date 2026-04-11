@@ -7,7 +7,7 @@ const MEMBER_SELECT = {
 };
 
 const TRAINER_SELECT = {
-  id: true, firstName: true, lastName: true, phone: true, email: true,
+  id: true, name: true,
 };
 
 const PLAN_VARIANT_INCLUDE = {

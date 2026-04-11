@@ -183,8 +183,18 @@ class TrainerPayoutService {
 
     const payoutDate = new Date();
 
-    const [payout] = await prisma.$transaction([
-      prisma.trainerPayout.create({
+    const [payout] = await prisma.$transaction(async (tx) => {
+      const expense = await tx.expense.create({
+        data: {
+          orgId: training.orgId,
+          amount,
+          category: "staff",
+          description: `Trainer payout – ${trainer.name} (${month}/${year})${notes ? `: ${notes}` : ""}`,
+          date: payoutDate,
+        },
+      });
+
+      const newPayout = await tx.trainerPayout.create({
         data: {
           orgId: training.orgId,
           trainerId,
@@ -196,20 +206,64 @@ class TrainerPayoutService {
           amount,
           notes: notes ?? null,
           paidAt: payoutDate,
+          expenseId: expense.id,
         },
-      }),
-      prisma.expense.create({
-        data: {
-          orgId: training.orgId,
-          amount,
-          category: "staff",
-          description: `Trainer payout – ${trainer.name} (${month}/${year})${notes ? `: ${notes}` : ""}`,
-          date: payoutDate,
-        },
-      }),
-    ]);
+      });
+
+      return [newPayout];
+    });
 
     return payout;
+  }
+
+  /**
+   * Delete a payout for a specific training-month, and its linked expense if present.
+   */
+  async deletePayout(trainerId, trainingId, month, year) {
+    await this._getTrainerOrThrow(trainerId);
+
+    const payout = await trainerPayoutRepository.findByTrainingMonth(trainingId, trainerId, month, year);
+    if (!payout) throw createError("Payout not found", 404);
+
+    await prisma.$transaction(async (tx) => {
+      await tx.trainerPayout.delete({ where: { id: payout.id } });
+      if (payout.expenseId) {
+        await tx.expense.delete({ where: { id: payout.expenseId } });
+      }
+    });
+  }
+
+  /**
+   * Backfill: create missing expense records for old payouts that have no expenseId.
+   * Safe to call multiple times (idempotent — skips already-linked payouts).
+   */
+  async backfillExpenses(orgId) {
+    const payouts = await prisma.trainerPayout.findMany({
+      where: { orgId, expenseId: null },
+      include: { trainer: { select: { name: true } } },
+    });
+
+    if (payouts.length === 0) return { backfilled: 0 };
+
+    await prisma.$transaction(async (tx) => {
+      for (const payout of payouts) {
+        const expense = await tx.expense.create({
+          data: {
+            orgId: payout.orgId,
+            amount: payout.amount,
+            category: "staff",
+            description: `Trainer payout – ${payout.trainer.name} (${payout.month}/${payout.year})${payout.notes ? `: ${payout.notes}` : ""}`,
+            date: payout.paidAt,
+          },
+        });
+        await tx.trainerPayout.update({
+          where: { id: payout.id },
+          data: { expenseId: expense.id },
+        });
+      }
+    });
+
+    return { backfilled: payouts.length };
   }
 
   /**
