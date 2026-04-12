@@ -225,6 +225,71 @@ class AnalyticsService {
     });
   }
 
+  // Discounts given over the last N months, split by offer-driven vs flat.
+  // Mirrors getRevenueBreakdown: 2 queries total, attribution on start_date,
+  // cached so repeated dashboard loads across orgs don't re-scan.
+  async getDiscounts(orgId, months) {
+    return cache.get(`analytics:discounts:${orgId}:${months}`, cache.TTL.TEN_MIN, async () => {
+      const now = new Date();
+      const from = new Date(now.getFullYear(), now.getMonth() - (months - 1), 1);
+      const to = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+      const [discountMap, salesCounts] = await Promise.all([
+        analyticsRepository.getDiscountsByMonths(orgId, from, to),
+        analyticsRepository.getSalesCounts(orgId, from, to),
+      ]);
+
+      let totalOfferDriven = 0;
+      let totalFlat = 0;
+      let membershipDiscountedCount = 0;
+      let trainingDiscountedCount = 0;
+
+      const byMonth = Array.from({ length: months }, (_, i) => {
+        const d = new Date(now.getFullYear(), now.getMonth() - (months - 1 - i), 1);
+        const year = d.getFullYear();
+        const month = d.getMonth() + 1;
+        const entry = discountMap.get(`${year}-${month}`) || {
+          membershipOffer: 0,
+          membershipFlat: 0,
+          trainingOffer: 0,
+          trainingFlat: 0,
+          membershipDiscountedCount: 0,
+          trainingDiscountedCount: 0,
+        };
+        const offer = entry.membershipOffer + entry.trainingOffer;
+        const flat = entry.membershipFlat + entry.trainingFlat;
+        totalOfferDriven += offer;
+        totalFlat += flat;
+        membershipDiscountedCount += entry.membershipDiscountedCount;
+        trainingDiscountedCount += entry.trainingDiscountedCount;
+
+        return {
+          year,
+          month,
+          offer: Math.round(offer * 100) / 100,
+          flat: Math.round(flat * 100) / 100,
+          total: Math.round((offer + flat) * 100) / 100,
+        };
+      });
+
+      const totalSales = salesCounts.membershipCount + salesCounts.trainingCount;
+      const discountedCount = membershipDiscountedCount + trainingDiscountedCount;
+      const discountRate =
+        totalSales > 0 ? Math.round((discountedCount / totalSales) * 1000) / 10 : 0;
+
+      return {
+        window: months,
+        totalOfferDriven: Math.round(totalOfferDriven * 100) / 100,
+        totalFlat: Math.round(totalFlat * 100) / 100,
+        total: Math.round((totalOfferDriven + totalFlat) * 100) / 100,
+        discountedCount,
+        totalSales,
+        discountRate,
+        byMonth,
+      };
+    });
+  }
+
   // Gender + age bracket distribution
   async getDemographics(orgId) {
     return cache.get(`analytics:demographics:${orgId}`, cache.TTL.TEN_MIN, async () => {

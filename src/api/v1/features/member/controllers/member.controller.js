@@ -54,6 +54,8 @@ class MemberController {
             : null;
       const joinedFrom = req.query.joinedFrom || null;
       const joinedTo = req.query.joinedTo || null;
+      const planTypeId = req.query.planTypeId || null;
+      const hasDiscount = req.query.hasDiscount === "true";
 
       const result = await memberService.getAllMembers(
         organizationId,
@@ -62,6 +64,8 @@ class MemberController {
         isActive,
         joinedFrom,
         joinedTo,
+        planTypeId,
+        hasDiscount,
       );
 
       res.status(200).json({

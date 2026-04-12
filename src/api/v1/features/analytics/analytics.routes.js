@@ -10,6 +10,7 @@ router.get("/payment-methods", analyticsController.getPaymentMethods);
 router.get("/trainer-performance", analyticsController.getTrainerPerformance);
 router.get("/member-growth", analyticsController.getMemberGrowth);
 router.get("/membership-duration-preference", analyticsController.getMembershipDurationPreference);
+router.get("/discounts", analyticsController.getDiscounts);
 router.get("/demographics", analyticsController.getDemographics);
 router.get("/unit-economics", analyticsController.getUnitEconomics);
 router.get("/projection", analyticsController.getProjection);

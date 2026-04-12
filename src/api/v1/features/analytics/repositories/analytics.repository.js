@@ -259,6 +259,99 @@ class AnalyticsRepository {
     return { activeMembers, totalRevenue, newJoinRows, expiredRows, windowMonths };
   }
 
+  // ─── Discounts ─────────────────────────────────────────────────────────────
+
+  /**
+   * Discounts given by month, split by offer-driven vs flat, for memberships and trainings.
+   * Attribution is on start_date (matches how revenue-breakdown attributes revenue).
+   *
+   * Uses partial indexes on (org_id, start_date) WHERE discount_amount > 0, so the
+   * scan cost is bounded by the number of discounted rows, not the total row count.
+   * Two queries, run in parallel.
+   *
+   * Returns a Map keyed by "YYYY-M" → {
+   *   membershipOffer, membershipFlat, trainingOffer, trainingFlat,
+   *   membershipDiscountedCount, trainingDiscountedCount
+   * }
+   */
+  async getDiscountsByMonths(orgId, from, to) {
+    const [membershipRows, trainingRows] = await Promise.all([
+      prisma.$queryRaw`
+        SELECT
+          EXTRACT(YEAR  FROM start_date)::int AS year,
+          EXTRACT(MONTH FROM start_date)::int AS month,
+          COALESCE(SUM(CASE WHEN offer_id IS NOT NULL THEN discount_amount ELSE 0 END), 0) AS offer_total,
+          COALESCE(SUM(CASE WHEN offer_id IS NULL     THEN discount_amount ELSE 0 END), 0) AS flat_total,
+          COUNT(*)::int AS discounted_count
+        FROM memberships
+        WHERE org_id         = ${orgId}
+          AND discount_amount > 0
+          AND start_date     >= ${from}
+          AND start_date     <= ${to}
+        GROUP BY year, month
+      `,
+      prisma.$queryRaw`
+        SELECT
+          EXTRACT(YEAR  FROM start_date)::int AS year,
+          EXTRACT(MONTH FROM start_date)::int AS month,
+          COALESCE(SUM(CASE WHEN offer_id IS NOT NULL THEN discount_amount ELSE 0 END), 0) AS offer_total,
+          COALESCE(SUM(CASE WHEN offer_id IS NULL     THEN discount_amount ELSE 0 END), 0) AS flat_total,
+          COUNT(*)::int AS discounted_count
+        FROM trainings
+        WHERE org_id         = ${orgId}
+          AND discount_amount > 0
+          AND start_date     >= ${from}
+          AND start_date     <= ${to}
+        GROUP BY year, month
+      `,
+    ]);
+
+    const map = new Map();
+    const ensure = (key) => {
+      if (!map.has(key)) {
+        map.set(key, {
+          membershipOffer: 0,
+          membershipFlat: 0,
+          trainingOffer: 0,
+          trainingFlat: 0,
+          membershipDiscountedCount: 0,
+          trainingDiscountedCount: 0,
+        });
+      }
+      return map.get(key);
+    };
+
+    for (const r of membershipRows) {
+      const entry = ensure(`${r.year}-${r.month}`);
+      entry.membershipOffer = Number(r.offer_total);
+      entry.membershipFlat = Number(r.flat_total);
+      entry.membershipDiscountedCount = Number(r.discounted_count);
+    }
+    for (const r of trainingRows) {
+      const entry = ensure(`${r.year}-${r.month}`);
+      entry.trainingOffer = Number(r.offer_total);
+      entry.trainingFlat = Number(r.flat_total);
+      entry.trainingDiscountedCount = Number(r.discounted_count);
+    }
+    return map;
+  }
+
+  /**
+   * Total membership + training sales count in the window — denominator for discount rate.
+   * Uses the existing (org_id, status) / default indexes; two cheap COUNT queries.
+   */
+  async getSalesCounts(orgId, from, to) {
+    const [membershipCount, trainingCount] = await Promise.all([
+      prisma.membership.count({
+        where: { orgId, startDate: { gte: from, lte: to } },
+      }),
+      prisma.training.count({
+        where: { orgId, startDate: { gte: from, lte: to } },
+      }),
+    ]);
+    return { membershipCount, trainingCount };
+  }
+
   // ─── Demographics ──────────────────────────────────────────────────────────
 
   async getDemographics(orgId) {

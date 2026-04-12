@@ -36,6 +36,8 @@ class MemberRepository extends CrudRepository {
     isActive = null,
     joinedFrom = null,
     joinedTo = null,
+    planTypeId = null,
+    hasDiscount = false,
   ) {
     const whereClause = {
       orgId: organizationId,
@@ -50,6 +52,18 @@ class MemberRepository extends CrudRepository {
       whereClause.joinDate = {};
       if (joinedFrom) whereClause.joinDate.gte = new Date(joinedFrom);
       if (joinedTo) whereClause.joinDate.lte = new Date(joinedTo);
+    }
+
+    // Filter: members who currently hold an active membership of a given plan type
+    if (planTypeId || hasDiscount) {
+      const membershipSome = { status: "active" };
+      if (planTypeId) {
+        membershipSome.planVariant = { planTypeId };
+      }
+      if (hasDiscount) {
+        membershipSome.discountAmount = { gt: 0 };
+      }
+      whereClause.memberships = { some: membershipSome };
     }
 
     return await this.findWithPagination(whereClause, {

@@ -92,6 +92,19 @@ class AnalyticsController {
     }
   };
 
+  // GET /analytics/discounts?months=6
+  getDiscounts = async (req, res, next) => {
+    try {
+      const orgId = requireOrgId(req, res);
+      if (!orgId) return;
+      const months = Math.min(parseInt(req.query.months) || 6, 24);
+      const data = await analyticsService.getDiscounts(orgId, months);
+      res.status(200).json({ success: true, data });
+    } catch (error) {
+      next(error);
+    }
+  };
+
   // GET /analytics/demographics
   getDemographics = async (req, res, next) => {
     try {

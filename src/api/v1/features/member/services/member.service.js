@@ -105,7 +105,16 @@ class MemberService {
     return member;
   }
 
-  async getAllMembers(organizationId, page = 1, limit = 10, isActive = null, joinedFrom = null, joinedTo = null) {
+  async getAllMembers(
+    organizationId,
+    page = 1,
+    limit = 10,
+    isActive = null,
+    joinedFrom = null,
+    joinedTo = null,
+    planTypeId = null,
+    hasDiscount = false,
+  ) {
     const result = await memberRepository.findActiveMembers(
       organizationId,
       page,
@@ -113,6 +122,8 @@ class MemberService {
       isActive,
       joinedFrom,
       joinedTo,
+      planTypeId,
+      hasDiscount,
     );
 
     return {
