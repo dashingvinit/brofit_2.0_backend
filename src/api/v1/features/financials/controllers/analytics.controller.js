@@ -16,6 +16,18 @@ class FinancialsAnalyticsController {
     }
   };
 
+  // GET /financials/summary-delta
+  getSummaryWithDelta = async (req, res, next) => {
+    try {
+      const orgId = requireOrgId(req, res);
+      if (!orgId) return;
+      const data = await analyticsService.getMonthlySummaryWithDelta(orgId);
+      res.status(200).json({ success: true, data });
+    } catch (error) {
+      next(error);
+    }
+  };
+
   // GET /financials/roi
   getRoi = async (req, res, next) => {
     try {

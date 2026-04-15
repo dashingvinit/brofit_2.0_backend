@@ -45,6 +45,52 @@ class FinancialsAnalyticsService {
   }
 
   /**
+   * Current month summary plus comparison points: previous month and
+   * same month last year. The frontend picks YoY when available, otherwise
+   * falls back to MoM, otherwise shows no delta (brand-new gyms).
+   */
+  async getMonthlySummaryWithDelta(orgId) {
+    return cache.get(`financials:summary-delta:${orgId}`, cache.TTL.FIVE_MIN, async () => {
+      const now = new Date();
+      const y = now.getFullYear();
+      const m = now.getMonth();
+
+      const ranges = {
+        thisMonth: [new Date(y, m, 1), new Date(y, m + 1, 0, 23, 59, 59, 999)],
+        lastMonth: [new Date(y, m - 1, 1), new Date(y, m, 0, 23, 59, 59, 999)],
+        yearAgo:   [new Date(y - 1, m, 1), new Date(y - 1, m + 1, 0, 23, 59, 59, 999)],
+      };
+
+      const computeNet = async ([from, to]) => {
+        const [revenue, expenses] = await Promise.all([
+          paymentRepository.sumInRange(orgId, from, to),
+          expenseRepository.sumInRange(orgId, from, to),
+        ]);
+        return { from, to, revenue, expenses, netProfit: revenue - expenses };
+      };
+
+      const earliestRevenueDate = await paymentRepository.getEarliestRevenueDate(orgId);
+      const hasYearOfHistory =
+        earliestRevenueDate && earliestRevenueDate <= ranges.yearAgo[1];
+      const hasLastMonth =
+        earliestRevenueDate && earliestRevenueDate <= ranges.lastMonth[1];
+
+      const [thisMonth, lastMonth, yearAgo] = await Promise.all([
+        computeNet(ranges.thisMonth),
+        hasLastMonth ? computeNet(ranges.lastMonth) : Promise.resolve(null),
+        hasYearOfHistory ? computeNet(ranges.yearAgo) : Promise.resolve(null),
+      ]);
+
+      return {
+        period: `${y}-${String(m + 1).padStart(2, "0")}`,
+        thisMonth,
+        lastMonth,
+        sameMonthLastYear: yearAgo,
+      };
+    });
+  }
+
+  /**
    * All-time ROI metrics.
    * Returns { totalInvested, totalRevenue, totalExpenses, totalNetProfit, roiPercent, paybackMonths }.
    */

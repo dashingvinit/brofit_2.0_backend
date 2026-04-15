@@ -28,6 +28,8 @@ router.delete("/investments/:id", investmentController.deleteInvestment);
 // ─── Analytics ───────────────────────────────────────────────────────────────
 // GET /api/v1/financials/summary?month=YYYY-MM
 router.get("/summary", analyticsController.getSummary);
+// GET /api/v1/financials/summary-delta
+router.get("/summary-delta", analyticsController.getSummaryWithDelta);
 // GET /api/v1/financials/roi
 router.get("/roi", analyticsController.getRoi);
 // GET /api/v1/financials/trends?months=12
