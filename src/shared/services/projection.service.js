@@ -44,14 +44,14 @@ function simulate({ startMembers, avgNewPerMonth, churnRate, arpu, fixedCostPerM
  * Worst: −20% new joins, +20% churn
  * Best:  +30% new joins, −20% churn
  */
-function runProjection({ activeMembers, arpu, churnRate, avgNewJoinsPerMonth, fixedCostPerMonth, capex, horizonMonths, dataPoints, window }) {
+function runProjection({ activeMembers, arpu, churnRate, avgNewJoinsPerMonth, fixedCostPerMonth, capex, horizonMonths, dataPoints, window, fixedCostSource = "override" }) {
   const base = { startMembers: activeMembers, avgNewPerMonth: avgNewJoinsPerMonth, churnRate, arpu, fixedCostPerMonth, capex, horizonMonths };
 
   return {
     inputs: {
       activeMembers, arpu, churnRate,
       churnPercent: Math.round(churnRate * 10000) / 100,
-      avgNewJoinsPerMonth, fixedCostPerMonth, capex,
+      avgNewJoinsPerMonth, fixedCostPerMonth, fixedCostSource, capex,
       window, horizon: horizonMonths, dataPoints,
     },
     base:  simulate(base),

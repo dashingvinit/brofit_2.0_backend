@@ -14,6 +14,7 @@ class ExpenseService {
       date: new Date(`${date}T00:00:00`),
     });
     cache.invalidate(`financials:${orgId}`);
+    cache.invalidate(`projection:${orgId}`);
     return result;
   }
 
@@ -38,6 +39,7 @@ class ExpenseService {
     if (data.date !== undefined) updates.date = new Date(`${data.date}T00:00:00`);
     const updated = await expenseRepository.update(id, orgId, updates);
     cache.invalidate(`financials:${orgId}`);
+    cache.invalidate(`projection:${orgId}`);
     return updated;
   }
 
@@ -46,6 +48,7 @@ class ExpenseService {
     if (!existing) throw createError("Expense not found", 404);
     await expenseRepository.delete(id, orgId);
     cache.invalidate(`financials:${orgId}`);
+    cache.invalidate(`projection:${orgId}`);
   }
 }
 
