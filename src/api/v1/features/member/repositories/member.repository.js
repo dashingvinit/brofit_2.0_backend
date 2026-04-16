@@ -38,6 +38,7 @@ class MemberRepository extends CrudRepository {
     joinedTo = null,
     planTypeId = null,
     hasDiscount = false,
+    noMembership = false,
   ) {
     const whereClause = {
       orgId: organizationId,
@@ -54,8 +55,12 @@ class MemberRepository extends CrudRepository {
       if (joinedTo) whereClause.joinDate.lte = new Date(joinedTo);
     }
 
-    // Filter: members who currently hold an active membership of a given plan type
-    if (planTypeId || hasDiscount) {
+    if (noMembership) {
+      // Active members with no active membership
+      whereClause.isActive = true;
+      whereClause.memberships = { none: { status: "active" } };
+    } else if (planTypeId || hasDiscount) {
+      // Filter: members who currently hold an active membership of a given plan type
       const membershipSome = { status: "active" };
       if (planTypeId) {
         membershipSome.planVariant = { planTypeId };

@@ -114,6 +114,7 @@ class MemberService {
     joinedTo = null,
     planTypeId = null,
     hasDiscount = false,
+    noMembership = false,
   ) {
     const result = await memberRepository.findActiveMembers(
       organizationId,
@@ -124,6 +125,7 @@ class MemberService {
       joinedTo,
       planTypeId,
       hasDiscount,
+      noMembership,
     );
 
     return {
