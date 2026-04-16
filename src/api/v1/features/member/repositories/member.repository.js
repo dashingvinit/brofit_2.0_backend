@@ -86,7 +86,7 @@ class MemberRepository extends CrudRepository {
         this.count({ orgId: organizationId, isActive: false }),
         this.count({
           orgId: organizationId,
-          createdAt: { gte: startOfMonth },
+          joinDate: { gte: startOfMonth },
         }),
       ]);
 
