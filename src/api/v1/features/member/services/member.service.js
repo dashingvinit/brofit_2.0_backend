@@ -331,13 +331,48 @@ class MemberService {
   }
 
   async batchDeleteMembers(memberIds) {
-    return executeBatch(memberIds, (id) => memberRepository.destroy(id));
+    return executeBatch(memberIds, (id) => this.deleteMember(id));
   }
 
   async deleteMember(memberId) {
-    await this._getMemberOrThrow(memberId);
-    await memberRepository.destroy(memberId);
-    return { message: "Member deleted successfully" };
+    const member = await this._getMemberOrThrow(memberId);
+
+    await prisma.$transaction(async (tx) => {
+      // 1. Delete Attendances
+      await tx.attendance.deleteMany({ where: { memberId } });
+
+      // 2. Delete Payments
+      await tx.payment.deleteMany({ where: { memberId } });
+
+      // 3. Delete TrainerPayouts related to member's trainings
+      const trainings = await tx.training.findMany({
+        where: { memberId },
+        select: { id: true },
+      });
+      const trainingIds = trainings.map((t) => t.id);
+      if (trainingIds.length > 0) {
+        await tx.trainerPayout.deleteMany({
+          where: { trainingId: { in: trainingIds } },
+        });
+      }
+
+      // 4. Delete Trainings
+      await tx.training.deleteMany({ where: { memberId } });
+
+      // 5. Delete Memberships
+      await tx.membership.deleteMany({ where: { memberId } });
+
+      // 6. Clear referral links (if this member referred others)
+      await tx.member.updateMany({
+        where: { referredById: memberId },
+        data: { referredById: null },
+      });
+
+      // 7. Finally delete the member record
+      await tx.member.delete({ where: { id: memberId } });
+    });
+
+    return { message: "Member and all associated data permanently deleted" };
   }
 
   async searchMembers(
