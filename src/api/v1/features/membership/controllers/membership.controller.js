@@ -196,7 +196,8 @@ class MembershipController {
   unfreezeMembership = async (req, res, next) => {
     try {
       const { id } = req.params;
-      const membership = await membershipService.unfreezeMembership(id);
+      const { extendEndDate } = req.body || {};
+      const membership = await membershipService.unfreezeMembership(id, { extendEndDate });
 
       res.status(200).json({
         success: true,
@@ -244,11 +245,11 @@ class MembershipController {
 
   batchUnfreezeMemberships = async (req, res, next) => {
     try {
-      const { ids } = req.body;
+      const { ids, extendEndDate } = req.body;
       if (!Array.isArray(ids) || ids.length === 0) {
         return res.status(400).json({ success: false, message: "ids array is required" });
       }
-      const result = await membershipService.batchUnfreezeMemberships(ids);
+      const result = await membershipService.batchUnfreezeMemberships(ids, { extendEndDate });
       res.status(200).json({
         success: true,
         message: `Unfrozen ${result.succeeded} membership(s)${result.failed > 0 ? `, ${result.failed} failed` : ''}`,

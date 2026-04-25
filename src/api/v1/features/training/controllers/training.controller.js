@@ -196,7 +196,8 @@ class TrainingController {
   unfreezeTraining = async (req, res, next) => {
     try {
       const { id } = req.params;
-      const training = await trainingService.unfreezeTraining(id);
+      const { extendEndDate } = req.body || {};
+      const training = await trainingService.unfreezeTraining(id, { extendEndDate });
 
       res.status(200).json({
         success: true,

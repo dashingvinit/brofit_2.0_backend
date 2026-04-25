@@ -101,6 +101,19 @@ class ReportsController {
       next(error);
     }
   };
+
+  getDuplicates = async (req, res, next) => {
+    try {
+      const orgId = requireOrgId(req, res);
+      if (!orgId) return;
+
+      const data = await reportsService.getDuplicateMembers(orgId);
+
+      res.status(200).json({ success: true, data });
+    } catch (error) {
+      next(error);
+    }
+  };
 }
 
 module.exports = new ReportsController();

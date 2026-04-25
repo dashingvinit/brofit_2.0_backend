@@ -514,6 +514,24 @@ class ReportsRepository {
 
     return { data, summary: { totalMembersWithDues: total, grandTotal }, pagination };
   }
+
+  async findDuplicateMembers(orgId) {
+    // Note: We use raw query for group by / having logic which is more efficient for this
+    const duplicates = await prisma.$queryRaw`
+      SELECT 
+        phone, 
+        COUNT(*)::int as count, 
+        array_agg(id ORDER BY join_date ASC) as ids, 
+        array_agg(first_name || ' ' || last_name ORDER BY join_date ASC) as names,
+        array_agg(to_char(join_date, 'YYYY-MM-DD') ORDER BY join_date ASC) as join_dates
+      FROM members
+      WHERE org_id = ${orgId} AND phone != '' AND phone IS NOT NULL
+      GROUP BY phone
+      HAVING COUNT(*) > 1
+    `;
+
+    return duplicates;
+  }
 }
 
 module.exports = new ReportsRepository();

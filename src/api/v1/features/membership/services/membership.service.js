@@ -198,7 +198,7 @@ class MembershipService {
     return await membershipRepository.findByIdWithDetails(membershipId);
   }
 
-  async unfreezeMembership(membershipId) {
+  async unfreezeMembership(membershipId, { extendEndDate = true } = {}) {
     const membership = await this._getMembershipOrThrow(membershipId);
     validateStatusTransition(membership.status, "unfreeze", "Membership");
 
@@ -206,7 +206,7 @@ class MembershipService {
     // (from when the freeze started to today). This mirrors the cron job logic
     // and ensures members aren't penalised when manually unfrozen early.
     let newEndDate = new Date(membership.endDate);
-    if (membership.freezeStartDate) {
+    if (extendEndDate && membership.freezeStartDate) {
       const actualFreezeEnd = new Date(); // today = unfreeze moment
       const daysFrozen = Math.ceil(
         (actualFreezeEnd - new Date(membership.freezeStartDate)) / (1000 * 60 * 60 * 24)
@@ -234,8 +234,8 @@ class MembershipService {
     return executeBatch(membershipIds, (id) => this.freezeMembership(id, { reason, freezeStartDate, freezeEndDate }));
   }
 
-  async batchUnfreezeMemberships(membershipIds) {
-    return executeBatch(membershipIds, (id) => this.unfreezeMembership(id));
+  async batchUnfreezeMemberships(membershipIds, { extendEndDate = true } = {}) {
+    return executeBatch(membershipIds, (id) => this.unfreezeMembership(id, { extendEndDate }));
   }
 
   async getExpiringMemberships(orgId, daysAhead = 7) {

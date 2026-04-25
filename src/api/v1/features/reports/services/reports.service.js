@@ -111,6 +111,10 @@ class ReportsService {
   async getActivityTrend(orgId, days = 30) {
     return reportsRepository.getActivityTrend(orgId, days);
   }
+
+  async getDuplicateMembers(orgId) {
+    return await reportsRepository.findDuplicateMembers(orgId);
+  }
 }
 
 module.exports = new ReportsService();

@@ -193,14 +193,14 @@ class TrainingService {
     return await trainingRepository.findByIdWithDetails(trainingId);
   }
 
-  async unfreezeTraining(trainingId) {
+  async unfreezeTraining(trainingId, { extendEndDate = true } = {}) {
     const training = await this._getTrainingOrThrow(trainingId);
     validateStatusTransition(training.status, "unfreeze", "Training");
 
     // Extend endDate by the number of days actually frozen so far,
     // mirroring the cron job logic for consistency.
     let newEndDate = new Date(training.endDate);
-    if (training.freezeStartDate) {
+    if (extendEndDate && training.freezeStartDate) {
       const actualFreezeEnd = new Date();
       const daysFrozen = Math.ceil(
         (actualFreezeEnd - new Date(training.freezeStartDate)) / (1000 * 60 * 60 * 24)

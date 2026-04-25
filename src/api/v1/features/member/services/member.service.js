@@ -171,6 +171,32 @@ class MemberService {
       }
     }
 
+    // Prevent exact duplicates (same contact AND same name) within the same organization
+    // This allows family members to share a phone number while blocking actual duplicates
+    if ((memberData.phone || memberData.email) && !memberData.bypassDuplicateCheck) {
+      const duplicate = await prisma.member.findFirst({
+        where: {
+          orgId: memberData.orgId,
+          AND: [
+            {
+              OR: [
+                memberData.phone ? { phone: memberData.phone } : undefined,
+                memberData.email ? { email: memberData.email } : undefined,
+              ].filter(Boolean),
+            },
+            { firstName: memberData.firstName },
+            { lastName: memberData.lastName },
+          ],
+        },
+      });
+      if (duplicate) {
+        throw createError(
+          `Member "${duplicate.firstName} ${duplicate.lastName}" already exists with this contact info`,
+          409
+        );
+      }
+    }
+
     if (memberData.referredById) {
       const referrer = await memberRepository.get(memberData.referredById);
       if (!referrer || referrer.orgId !== memberData.orgId) {
@@ -373,6 +399,67 @@ class MemberService {
     });
 
     return { message: "Member and all associated data permanently deleted" };
+  }
+
+  /**
+   * Merges a source member into a target member, moving all history and subscriptions.
+   */
+  async mergeMembers(sourceId, targetId, orgId) {
+    if (sourceId === targetId) {
+      throw createError("Cannot merge a member into themselves", 400);
+    }
+
+    const [source, target] = await Promise.all([
+      this._getMemberOrThrow(sourceId),
+      this._getMemberOrThrow(targetId),
+    ]);
+
+    if (source.orgId !== target.orgId) {
+      throw createError("Members must belong to the same organization", 400);
+    }
+
+    if (source.orgId !== orgId) {
+      throw createError("Members do not belong to your organization", 403);
+    }
+
+    await prisma.$transaction(async (tx) => {
+      // 1. Move Memberships
+      await tx.membership.updateMany({
+        where: { memberId: sourceId },
+        data: { memberId: targetId },
+      });
+
+      // 2. Move Trainings
+      await tx.training.updateMany({
+        where: { memberId: sourceId },
+        data: { memberId: targetId },
+      });
+
+      // 3. Move Attendances
+      await tx.attendance.updateMany({
+        where: { memberId: sourceId },
+        data: { memberId: targetId },
+      });
+
+      // 4. Move Payments
+      await tx.payment.updateMany({
+        where: { memberId: sourceId },
+        data: { memberId: targetId },
+      });
+
+      // 5. Update referrals (if source referred someone)
+      await tx.member.updateMany({
+        where: { referredById: sourceId },
+        data: { referredById: targetId },
+      });
+
+      // 6. Delete source member
+      await tx.member.delete({ where: { id: sourceId } });
+    });
+
+    return { 
+      message: `Successfully merged ${source.firstName} into ${target.firstName}. All history preserved.` 
+    };
   }
 
   async searchMembers(

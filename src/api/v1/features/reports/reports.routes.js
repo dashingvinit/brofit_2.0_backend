@@ -26,4 +26,8 @@ router.get("/dues", reportsController.getDuesReport);
 // Daily member activity snapshots for charting (populated by cron)
 router.get("/activity-trend", reportsController.getActivityTrend);
 
+// GET /api/v1/reports/duplicates
+// Potential duplicate members identified by phone number
+router.get("/duplicates", reportsController.getDuplicates);
+
 module.exports = router;

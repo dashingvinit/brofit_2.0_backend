@@ -281,6 +281,30 @@ class MemberController {
       next(error);
     }
   };
+
+  mergeMembers = async (req, res, next) => {
+    try {
+      const orgId = requireOrgId(req, res);
+      if (!orgId) return;
+
+      const { sourceId, targetId } = req.body;
+      if (!sourceId || !targetId) {
+        return res.status(400).json({ 
+          success: false, 
+          message: "Both sourceId and targetId are required" 
+        });
+      }
+
+      const result = await memberService.mergeMembers(sourceId, targetId, orgId);
+
+      res.status(200).json({
+        success: true,
+        message: result.message,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 }
 
 module.exports = new MemberController();

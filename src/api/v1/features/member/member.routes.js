@@ -22,6 +22,9 @@ router.post("/import", memberController.importMembers);
 router.patch("/batch", memberController.batchUpdateMembers);
 router.delete("/batch", memberController.batchDeleteMembers);
 
+// Merge two members
+router.post("/merge", memberController.mergeMembers);
+
 // Get all members in an organization
 router.get("/", memberController.getAllMembers);
 

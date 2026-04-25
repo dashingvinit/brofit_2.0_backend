@@ -150,6 +150,11 @@ class MemberRepository extends CrudRepository {
             },
           },
         },
+        attendances: {
+          take: 1,
+          orderBy: { entryTime: "desc" },
+          select: { entryTime: true },
+        },
       },
     });
   }
