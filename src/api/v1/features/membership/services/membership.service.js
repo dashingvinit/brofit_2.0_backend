@@ -85,6 +85,13 @@ class MembershipService {
         });
       }
 
+      if (data.referredById) {
+        await tx.member.update({
+          where: { id: data.memberId },
+          data: { referredById: data.referredById },
+        });
+      }
+
       return { membership, payment };
     });
 
