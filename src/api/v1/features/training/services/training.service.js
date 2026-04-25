@@ -64,7 +64,7 @@ class TrainingService {
           trainerId: data.trainerId,
           startDate,
           endDate,
-          status: "active",
+          status: startDate > new Date() ? "upcoming" : "active",
           priceAtPurchase,
           discountAmount,
           finalPrice,
@@ -171,11 +171,25 @@ class TrainingService {
     return await trainingRepository.findByIdWithDetails(trainingId);
   }
 
-  async freezeTraining(trainingId) {
+  async freezeTraining(trainingId, { reason, freezeStartDate, freezeEndDate } = {}) {
     const training = await this._getTrainingOrThrow(trainingId);
+
+    if (training.freezeCount >= 3) {
+      throw createError("Maximum freeze limit (3) reached for this training", 400);
+    }
+
     validateStatusTransition(training.status, "freeze", "Training");
 
-    await trainingRepository.update(trainingId, { status: "frozen" });
+    const start = freezeStartDate ? new Date(freezeStartDate) : new Date();
+    const isFuture = start > new Date();
+
+    await trainingRepository.update(trainingId, {
+      status: isFuture ? training.status : "frozen",
+      freezeReason: reason || null,
+      freezeStartDate: start,
+      freezeEndDate: freezeEndDate ? new Date(freezeEndDate) : null,
+      freezeCount: training.freezeCount + 1,
+    });
     return await trainingRepository.findByIdWithDetails(trainingId);
   }
 
@@ -183,7 +197,26 @@ class TrainingService {
     const training = await this._getTrainingOrThrow(trainingId);
     validateStatusTransition(training.status, "unfreeze", "Training");
 
-    await trainingRepository.update(trainingId, { status: "active" });
+    // Extend endDate by the number of days actually frozen so far,
+    // mirroring the cron job logic for consistency.
+    let newEndDate = new Date(training.endDate);
+    if (training.freezeStartDate) {
+      const actualFreezeEnd = new Date();
+      const daysFrozen = Math.ceil(
+        (actualFreezeEnd - new Date(training.freezeStartDate)) / (1000 * 60 * 60 * 24)
+      );
+      if (daysFrozen > 0) {
+        newEndDate.setDate(newEndDate.getDate() + daysFrozen);
+      }
+    }
+
+    await trainingRepository.update(trainingId, {
+      status: "active",
+      endDate: newEndDate,
+      freezeReason: null,
+      freezeStartDate: null,
+      freezeEndDate: null,
+    });
     return await trainingRepository.findByIdWithDetails(trainingId);
   }
 

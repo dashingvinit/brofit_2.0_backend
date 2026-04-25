@@ -116,6 +116,7 @@ enum PlanCategory {
 
 enum MembershipStatus {
   active
+  upcoming
   expired
   cancelled
   frozen
@@ -123,6 +124,7 @@ enum MembershipStatus {
 
 enum TrainingStatus {
   active
+  upcoming
   expired
   cancelled
   frozen
@@ -159,6 +161,7 @@ model Membership {
   freezeReason    String?          @map("freeze_reason")
   freezeStartDate DateTime?        @map("freeze_start_date")
   freezeEndDate   DateTime?        @map("freeze_end_date")
+  freezeCount     Int              @default(0) @map("freeze_count")
   createdAt       DateTime         @default(now()) @map("created_at")
   updatedAt       DateTime         @updatedAt @map("updated_at")
 
@@ -190,6 +193,10 @@ model Training {
   finalPrice      Float          @map("final_price")
   autoRenew           Boolean        @default(false) @map("auto_renew")
   notes               String?
+  freezeReason        String?        @map("freeze_reason")
+  freezeStartDate     DateTime?      @map("freeze_start_date")
+  freezeEndDate       DateTime?      @map("freeze_end_date")
+  freezeCount         Int            @default(0) @map("freeze_count")
   trainerFixedPayout  Float?         @map("trainer_fixed_payout")
   createdAt           DateTime       @default(now()) @map("created_at")
   updatedAt           DateTime       @updatedAt @map("updated_at")

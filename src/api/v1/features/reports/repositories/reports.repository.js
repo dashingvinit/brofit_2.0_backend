@@ -62,7 +62,81 @@ class ReportsRepository {
       },
     });
   }
+  /**
+   * Process scheduled status changes: upcoming to active, and freeze transitions.
+   */
+  async processScheduledStatusChanges(orgId) {
+    const today = startOfDay();
+    
+    // 1. upcoming -> active
+    await prisma.membership.updateMany({
+      where: { orgId, status: "upcoming", startDate: { lte: today } },
+      data: { status: "active" },
+    });
+    await prisma.training.updateMany({
+      where: { orgId, status: "upcoming", startDate: { lte: today } },
+      data: { status: "active" },
+    });
+    
+    // 2. active -> frozen
+    await prisma.membership.updateMany({
+      where: { orgId, status: "active", freezeStartDate: { lte: today }, freezeEndDate: { gte: today } },
+      data: { status: "frozen" },
+    });
+    await prisma.training.updateMany({
+      where: { orgId, status: "active", freezeStartDate: { lte: today }, freezeEndDate: { gte: today } },
+      data: { status: "frozen" },
+    });
+    
+    // 3. frozen -> active (and extend end date)
+    const toUnfreezeM = await prisma.membership.findMany({
+      where: { orgId, status: "frozen", freezeEndDate: { lt: today } },
+      select: { id: true, endDate: true, freezeStartDate: true, freezeEndDate: true }
+    });
+    
+    for (const m of toUnfreezeM) {
+      if (m.freezeStartDate && m.freezeEndDate) {
+        const daysFrozen = Math.ceil((m.freezeEndDate - m.freezeStartDate) / (1000 * 60 * 60 * 24));
+        const newEndDate = new Date(m.endDate);
+        newEndDate.setDate(newEndDate.getDate() + daysFrozen);
+        
+        await prisma.membership.update({
+          where: { id: m.id },
+          data: {
+            status: "active",
+            endDate: newEndDate,
+            freezeStartDate: null,
+            freezeEndDate: null,
+            freezeReason: null,
+          }
+        });
+      }
+    }
 
+    const toUnfreezeT = await prisma.training.findMany({
+      where: { orgId, status: "frozen", freezeEndDate: { lt: today } },
+      select: { id: true, endDate: true, freezeStartDate: true, freezeEndDate: true }
+    });
+    
+    for (const t of toUnfreezeT) {
+      if (t.freezeStartDate && t.freezeEndDate) {
+        const daysFrozen = Math.ceil((t.freezeEndDate - t.freezeStartDate) / (1000 * 60 * 60 * 24));
+        const newEndDate = new Date(t.endDate);
+        newEndDate.setDate(newEndDate.getDate() + daysFrozen);
+        
+        await prisma.training.update({
+          where: { id: t.id },
+          data: {
+            status: "active",
+            endDate: newEndDate,
+            freezeStartDate: null,
+            freezeEndDate: null,
+            freezeReason: null,
+          }
+        });
+      }
+    }
+  }
 
   /**
    * Bulk-expire memberships where endDate has passed and status is still "active".
@@ -209,8 +283,8 @@ class ReportsRepository {
       where: {
         orgId,
         isActive: true,
-        memberships: { none: { status: "active" } },
-        trainings: { none: { status: "active" } },
+        memberships: { none: { status: { in: ["active", "upcoming", "frozen"] } } },
+        trainings: { none: { status: { in: ["active", "upcoming", "frozen"] } } },
       },
       select: { id: true },
     });
@@ -239,8 +313,8 @@ class ReportsRepository {
     const where = {
       orgId,
       isActive: true,
-      memberships: { none: { status: "active" } },
-      trainings: { none: { status: "active" } },
+      memberships: { none: { status: { in: ["active", "upcoming", "frozen"] } } },
+      trainings: { none: { status: { in: ["active", "upcoming", "frozen"] } } },
     };
 
     const [data, total] = await Promise.all([
@@ -251,11 +325,13 @@ class ReportsRepository {
         orderBy: { updatedAt: "desc" },
         include: {
           memberships: {
+            where: { status: { in: ["expired", "cancelled"] } },
             orderBy: { endDate: "desc" },
             take: 1,
             select: { id: true, status: true, endDate: true },
           },
           trainings: {
+            where: { status: { in: ["expired", "cancelled"] } },
             orderBy: { endDate: "desc" },
             take: 1,
             select: { id: true, status: true, endDate: true },

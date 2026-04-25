@@ -7,6 +7,9 @@ class ReportsService {
    * who have no remaining active subscriptions.
    */
   async expireSubscriptions(orgId) {
+    // Process any scheduled status transitions (upcoming->active, active->frozen, frozen->active)
+    await reportsRepository.processScheduledStatusChanges(orgId);
+
     // Bulk-expire stale memberships and trainings
     const [expiredMemberships, expiredTrainings] = await Promise.all([
       reportsRepository.expireStaleMemberships(orgId),

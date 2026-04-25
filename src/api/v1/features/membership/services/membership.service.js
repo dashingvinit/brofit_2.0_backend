@@ -58,7 +58,7 @@ class MembershipService {
           planVariantId: data.planVariantId,
           startDate,
           endDate,
-          status: "active",
+          status: startDate > new Date() ? "upcoming" : "active",
           priceAtPurchase,
           discountAmount,
           finalPrice,
@@ -178,13 +178,22 @@ class MembershipService {
 
   async freezeMembership(membershipId, { reason, freezeStartDate, freezeEndDate } = {}) {
     const membership = await this._getMembershipOrThrow(membershipId);
+    
+    if (membership.freezeCount >= 3) {
+      throw createError("Maximum freeze limit (3) reached for this membership", 400);
+    }
+    
     validateStatusTransition(membership.status, "freeze", "Membership");
 
+    const start = freezeStartDate ? new Date(freezeStartDate) : new Date();
+    const isFuture = start > new Date();
+
     await membershipRepository.update(membershipId, {
-      status: "frozen",
+      status: isFuture ? membership.status : "frozen",
       freezeReason: reason || null,
-      freezeStartDate: freezeStartDate ? new Date(freezeStartDate) : new Date(),
+      freezeStartDate: start,
       freezeEndDate: freezeEndDate ? new Date(freezeEndDate) : null,
+      freezeCount: membership.freezeCount + 1,
     });
     return await membershipRepository.findByIdWithDetails(membershipId);
   }
@@ -193,8 +202,23 @@ class MembershipService {
     const membership = await this._getMembershipOrThrow(membershipId);
     validateStatusTransition(membership.status, "unfreeze", "Membership");
 
+    // Extend endDate by the number of days actually frozen so far
+    // (from when the freeze started to today). This mirrors the cron job logic
+    // and ensures members aren't penalised when manually unfrozen early.
+    let newEndDate = new Date(membership.endDate);
+    if (membership.freezeStartDate) {
+      const actualFreezeEnd = new Date(); // today = unfreeze moment
+      const daysFrozen = Math.ceil(
+        (actualFreezeEnd - new Date(membership.freezeStartDate)) / (1000 * 60 * 60 * 24)
+      );
+      if (daysFrozen > 0) {
+        newEndDate.setDate(newEndDate.getDate() + daysFrozen);
+      }
+    }
+
     await membershipRepository.update(membershipId, {
       status: "active",
+      endDate: newEndDate,
       freezeReason: null,
       freezeStartDate: null,
       freezeEndDate: null,
