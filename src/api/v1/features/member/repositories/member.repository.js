@@ -1,6 +1,10 @@
 const CrudRepository = require("../../../../../shared/repositories/crud.repository");
 const { prisma } = require("../../../../../config/prisma.config");
-const { getStartOfCurrentMonth } = require("../../../../../shared/helpers/subscription.helper");
+const {
+  getStartOfCurrentMonth,
+} = require("../../../../../shared/helpers/subscription.helper");
+
+const SEARCH_POOL_LIMIT = 2000;
 
 class MemberRepository extends CrudRepository {
   constructor() {
@@ -103,34 +107,9 @@ class MemberRepository extends CrudRepository {
     };
   }
 
-  async searchMembers(
-    organizationId,
-    searchTerm,
-    limit = 10,
-    includeInactive = true,
-  ) {
-    const baseConditions = [
-      { firstName: { contains: searchTerm, mode: "insensitive" } },
-      { lastName: { contains: searchTerm, mode: "insensitive" } },
-      { email: { contains: searchTerm, mode: "insensitive" } },
-      { phone: { contains: searchTerm } },
-      { id: { contains: searchTerm, mode: "insensitive" } },
-      {
-        memberships: {
-          some: {
-            planVariant: {
-              planType: {
-                name: { contains: searchTerm, mode: "insensitive" },
-              },
-            },
-          },
-        },
-      },
-    ];
-
+  async searchMembers(organizationId, includeInactive = true) {
     const whereClause = {
       orgId: organizationId,
-      OR: baseConditions,
     };
 
     // Only filter by isActive if includeInactive is false
@@ -138,10 +117,24 @@ class MemberRepository extends CrudRepository {
       whereClause.isActive = true;
     }
 
-    return await this.find(whereClause, {
-      take: limit,
+    return await this.model.findMany({
+      where: whereClause,
+      take: SEARCH_POOL_LIMIT,
       orderBy: { createdAt: "desc" },
-      include: {
+      select: {
+        id: true,
+        firstName: true,
+        middleName: true,
+        lastName: true,
+        phone: true,
+        email: true,
+        dateOfBirth: true,
+        gender: true,
+        joinDate: true,
+        notes: true,
+        isActive: true,
+        referredById: true,
+        createdAt: true,
         memberships: {
           where: { status: "active" },
           take: 1,
