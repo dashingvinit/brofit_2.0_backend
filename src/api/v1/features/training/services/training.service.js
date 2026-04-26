@@ -135,19 +135,29 @@ class TrainingService {
   }
 
   async updateTraining(trainingId, updateData) {
-    await this._getTrainingOrThrow(trainingId);
+    const training = await this._getTrainingOrThrow(trainingId);
 
     const dbData = {};
     if (updateData.status !== undefined) dbData.status = updateData.status;
     if (updateData.autoRenew !== undefined)
       dbData.autoRenew = updateData.autoRenew;
     if (updateData.notes !== undefined) dbData.notes = updateData.notes;
+    if (updateData.startDate !== undefined)
+      dbData.startDate = new Date(updateData.startDate);
     if (updateData.endDate !== undefined)
       dbData.endDate = new Date(updateData.endDate);
     if (updateData.trainerId !== undefined)
       dbData.trainerId = updateData.trainerId;
     if (updateData.trainerFixedPayout !== undefined)
       dbData.trainerFixedPayout = updateData.trainerFixedPayout != null ? parseFloat(updateData.trainerFixedPayout) : null;
+    if (updateData.discountAmount !== undefined) {
+      const { discountAmount, finalPrice } = calculatePricing(
+        training.priceAtPurchase,
+        updateData.discountAmount,
+      );
+      dbData.discountAmount = discountAmount;
+      dbData.finalPrice = finalPrice;
+    }
 
     await trainingRepository.update(trainingId, dbData);
     return await trainingRepository.findByIdWithDetails(trainingId);
